@@ -17,7 +17,7 @@ from sqlalchemy import create_engine
 from split.api.filetrbackend import DjangoFilterBackend
 import csv
 import datetime
-from datetime import timedelta
+from datetime import date, timedelta
 import pandas as pd
 from collections import OrderedDict, namedtuple
 import os, re
@@ -36,6 +36,28 @@ class Filterpage(PageNumberPagination):
         return Response(OrderedDict([
             ('path', path)
         ]))
+
+
+from datetime import date, timedelta
+from django_filters import rest_framework as filters
+class LocationFilter(filters.FilterSet):
+    d = date.today()-timedelta(days=7)
+    id = filters.NumberFilter(lookup_expr='icontains')
+    strain = filters.CharFilter(lookup_expr='icontains')
+    lineage = filters.CharFilter(lookup_expr='icontains')
+    reference_id = filters.CharFilter(lookup_expr='icontains')
+    mutation = filters.CharFilter(lookup_expr='icontains')
+    amine_acid_position = filters.CharFilter(lookup_expr='icontains')
+    gene = filters.CharFilter(lookup_expr='icontains')
+    date = filters.CharFilter(lookup_expr='icontains')
+    start_date = filters.DateFilter(field_name="date",lookup_expr="gte")
+    end_date = filters.DateFilter(field_name="date",lookup_expr="lte")
+    # past_data = filters(date__=d)
+    # d=date.today()-timedelta(days=7)
+    class Meta:
+        model = tsvfile
+        fields = ['id','date','start_date','end_date','strain','lineage','reference_id','mutation','amine_acid_position','gene',]
+
 
 class dataserializer(serializers.ModelSerializer):
     class Meta:
@@ -84,7 +106,7 @@ class FilterSerializer(serializers.ModelSerializer):
         fields = "__all__"
 
 class FilterSerializer1(serializers.ModelSerializer):
-    
+    days = serializers.IntegerField(required=False)
     class Meta:
         model = tsvfile
         fields = "__all__"
@@ -93,10 +115,19 @@ class filter2(ListAPIView):
     serializer_class = FilterSerializer1
     pagination_class = LargeResultsSetPagination
     filter_backends = (DjangoFilterBackend,SearchFilter)
-    filter_fields = ('id','date','strain','lineage','reference_id','mutation','amine_acid_position','gene',)
+    filter_class = LocationFilter
+    filter_fields = ('id','date','start_date','end_date','strain','lineage','reference_id','mutation','amine_acid_position','gene',)
     search_fields = ('id','date','strain','lineage','reference_id','mutation','amine_acid_position','gene',)
     def get_queryset(self):
-        QuerySet = tsvfile.objects.all()
+        # print(dir(self))
+        days = int(self.request.GET.get('days'))
+        # print(days)
+        d=date.today()-timedelta(days=days)
+        # Entry.objects.filter(pub_date__gte=d)
+        # if d:
+        QuerySet = tsvfile.objects.filter(date__gte=d)
+        # if ((not d) or (d == 'undefined')):
+        #     QuerySet = tsvfile.objects.all()
         return QuerySet
     
 
@@ -202,20 +233,6 @@ class Filter(APIView):
             serializer = FilterSerializer(A[start:end], many=True)
         return Response({"data": serializer.data})
 
-
-from django_filters import rest_framework as filters
-class LocationFilter(filters.FilterSet):
-    id = filters.NumberFilter(lookup_expr='icontains')
-    strain = filters.CharFilter(lookup_expr='icontains')
-    lineage = filters.CharFilter(lookup_expr='icontains')
-    reference_id = filters.NumberFilter(lookup_expr='icontains')
-    mutation = filters.CharFilter(lookup_expr='icontains')
-    amine_acid_position = filters.CharFilter(lookup_expr='icontains')
-    gene = filters.CharFilter(lookup_expr='icontains')
-    # date = filters.Datefilter(lookup_expr='icontains')
-    class Meta:
-        model = tsvfile
-        fields = ['id','date','strain','lineage','reference_id','mutation','amine_acid_position','gene',]
 
 class Myjangofilter(DjangoFilterBackend):
     def filter_queryset(self, request, queryset, view):

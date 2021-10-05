@@ -96,15 +96,7 @@ class DjangoFilterBackend(metaclass=RenameAttributes):
 
         if not filterset.is_valid() and self.raise_exception:
             raise utils.translate_validation(filterset.errors)
-        # df  = pd.DataFrame.from_records(filterset.qs.values())
-        # file_name = str(datetime.today())+'.csv'
-        # new_file = re.sub('[ ;:]', '_', file_name)
-        # path = f'C:/Users/sampa/Desktop/{new_file}.csv'
-        # df.to_csv(path,index=False)
-        # print(path)
-        # print(path)
         return filterset.qs
-        # return (view)
 
     def to_html(self, request, queryset, view):
         filterset = self.get_filterset(request, queryset, view)
