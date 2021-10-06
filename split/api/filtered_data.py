@@ -6,7 +6,7 @@ from django.shortcuts import redirect, render
 # from django_filters.rest_framework import DjangoFilterBackend
 from pandas.core.frame import DataFrame
 from rest_framework import generics, pagination, serializers
-from rest_framework.filters import SearchFilter
+from rest_framework.filters import SearchFilter, OrderingFilter
 from rest_framework.generics import ListAPIView, RetrieveAPIView
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
@@ -110,23 +110,31 @@ class FilterSerializer1(serializers.ModelSerializer):
     class Meta:
         model = tsvfile
         fields = "__all__"
-        
+
+from dateutil.relativedelta import *    
 class filter2(ListAPIView):
     serializer_class = FilterSerializer1
     pagination_class = LargeResultsSetPagination
-    filter_backends = (DjangoFilterBackend,SearchFilter)
+    filter_backends = (DjangoFilterBackend,SearchFilter,OrderingFilter)
     filter_class = LocationFilter
     filter_fields = ('id','date','start_date','end_date','strain','lineage','reference_id','mutation','amine_acid_position','gene',)
     search_fields = ('id','date','strain','lineage','reference_id','mutation','amine_acid_position','gene',)
+    ordering_fields = ['id','date','strain','lineage','reference_id','mutation','amine_acid_position','gene',]
     def get_queryset(self):
         # print(dir(self))
-        days = int(self.request.GET.get('days'))
+        # months = int(self.request.GET.get('months'))
+        days = int(self.request.GET.get('days',3650))
         # print(days)
-        d=date.today()-timedelta(days=days)
+        # months=date.today()-relativedelta(months=+months)
+        days=date.today()-timedelta(days=days)
         # Entry.objects.filter(pub_date__gte=d)
-        # if d:
-        QuerySet = tsvfile.objects.filter(date__gte=d)
-        # if ((not d) or (d == 'undefined')):
+        # if days:
+        #     QuerySet = tsvfile.objects.filter(date__gte=days)
+        # if ((not months) or (months == 'undefined')):
+        QuerySet = tsvfile.objects.filter(date__gte=days)
+        # if ((not days) or (days == 'undefined')):
+        #     QuerySet = tsvfile.objects.filter(date__gte=months)
+        # else:
         #     QuerySet = tsvfile.objects.all()
         return QuerySet
     
