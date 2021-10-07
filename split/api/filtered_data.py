@@ -21,6 +21,7 @@ from datetime import date, timedelta
 import pandas as pd
 from collections import OrderedDict, namedtuple
 import os, re
+from django.db.models import Max
 from splitting.settings import BASE_DIR
 file_name = str(datetime.datetime.today())
 new_file = re.sub('[ ;:]', '_', file_name)
@@ -71,12 +72,15 @@ class LineageFilter(RetrieveAPIView):
         serializer = dataserializer(A, many=True)
         return Response({"data": serializer.data})
 
-
-class StrainFilter(RetrieveAPIView):
-    serializer_class = dataserializer
-    def get(self, request,strain):
-        A = tsvfile.objects.filter(strain=strain)
-        serializer = dataserializer(A, many=True)
+class dateserializer(serializers.ModelSerializer):
+    class Meta:
+        model = tsvfile
+        fields = ('id','date')
+class max_date(RetrieveAPIView):
+    serializer_class = dateserializer
+    def get(self, request):
+        A = tsvfile.objects.order_by('date').first()
+        serializer = dateserializer(A, many=True)
         return Response({"data": serializer.data})
 
 
@@ -121,21 +125,9 @@ class filter2(ListAPIView):
     search_fields = ('id','date','strain','lineage','reference_id','mutation','amine_acid_position','gene',)
     ordering_fields = ['id','date','strain','lineage','reference_id','mutation','amine_acid_position','gene',]
     def get_queryset(self):
-        # print(dir(self))
-        # months = int(self.request.GET.get('months'))
         days = int(self.request.GET.get('days',3650))
-        # print(days)
-        # months=date.today()-relativedelta(months=+months)
         days=date.today()-timedelta(days=days)
-        # Entry.objects.filter(pub_date__gte=d)
-        # if days:
-        #     QuerySet = tsvfile.objects.filter(date__gte=days)
-        # if ((not months) or (months == 'undefined')):
         QuerySet = tsvfile.objects.filter(date__gte=days)
-        # if ((not days) or (days == 'undefined')):
-        #     QuerySet = tsvfile.objects.filter(date__gte=months)
-        # else:
-        #     QuerySet = tsvfile.objects.all()
         return QuerySet
     
 
@@ -262,7 +254,12 @@ class exportcsv(ListAPIView):
     filter_backends = [Myjangofilter]
     filterset_class = LocationFilter
     
+    filter_fields = ('id','date','start_date','end_date','strain','lineage','reference_id','mutation','amine_acid_position','gene',)
+    search_fields = ('id','date','strain','lineage','reference_id','mutation','amine_acid_position','gene',)
+    ordering_fields = ['id','date','strain','lineage','reference_id','mutation','amine_acid_position','gene',]
     def get_queryset(self):
-        queryset = tsvfile.objects.all()
-        return queryset
+        days = int(self.request.GET.get('days',3650))
+        days=date.today()-timedelta(days=days)
+        QuerySet = tsvfile.objects.filter(date__gte=days)
+        return QuerySet
 
