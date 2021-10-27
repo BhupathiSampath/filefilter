@@ -3,7 +3,7 @@ import pandas as pd
 from django.db.models import fields
 from django.http.response import HttpResponse, JsonResponse
 from django.shortcuts import redirect, render
-# from django_filters.rest_framework import DjangoFilterBackend
+from django_filters.rest_framework import DjangoFilterBackend
 from pandas.core.frame import DataFrame
 from rest_framework import generics, pagination, serializers
 from rest_framework.filters import SearchFilter, OrderingFilter
@@ -14,7 +14,7 @@ from rest_framework.views import APIView
 from split.models import tsvfile, PangoVarsion
 # import sqlalchemy
 from sqlalchemy import create_engine
-from split.api.filetrbackend import DjangoFilterBackend
+# from split.api.filetrbackend import DjangoFilterBackend
 import csv
 import datetime
 from datetime import date, timedelta
@@ -105,7 +105,7 @@ class FilterSerializer1(serializers.ModelSerializer):
         fields = "__all__"
 
 from dateutil.relativedelta import *    
-class filter2(ListAPIView):
+class Filter(ListAPIView):
     serializer_class = dataserializer
     pagination_class = LargeResultsSetPagination
     filter_backends = (DjangoFilterBackend,SearchFilter,OrderingFilter)
@@ -121,107 +121,7 @@ class filter2(ListAPIView):
         return QuerySet
     
 
-from django.db.models import Q
 
-
-class Filter(APIView):
-    pagination_class = LargeResultsSetPagination
-    serializer_class = FilterSerializer
-    
-    def post(self,request):
-        strain = request.data.get('strain')
-        lineage = request.data.get('lineage')
-        mutation = request.data.get('mutation')
-        gene = request.data.get('gene')
-        reference_id = request.data.get('reference_id')
-        amino_acid_position = request.data.get('amino_acid_position')
-        search = request.data.get('search', "")
-        page = int(request.data.get('page', 1))
-        per_page = 100
-        start = (page -1)* per_page
-        end = page*per_page
-        if search:
-            A = tsvfile.objects.filter(Q(mutation__icontains=search) | Q(lineage__icontains=search) | Q(strain__icontains=search) | Q(reference_id__icontains=search) | Q(amino_acid_position__icontains=search) | Q(gene__icontains=search))
-            serializer = FilterSerializer(A[start:end], many=True)
-        if strain:
-            A = tsvfile.objects.filter(strain__icontains=strain)
-            serializer = FilterSerializer(A[start:end], many=True)
-        if lineage:
-            A = tsvfile.objects.filter(lineage__icontains=lineage)
-            serializer = FilterSerializer(A[start:end], many=True)
-        if gene:
-            A = tsvfile.objects.filter(gene__icontains=gene)
-            serializer = FilterSerializer(A[start:end], many=True)
-        if reference_id:
-            A = tsvfile.objects.filter(reference_id__icontains=reference_id)
-            serializer = FilterSerializer(A[start:end], many=True)
-        if mutation:
-            A = tsvfile.objects.filter(mutation__icontains=mutation)
-            serializer = FilterSerializer(A[start:end], many=True)
-        if amino_acid_position:
-            A = tsvfile.objects.filter(amino_acid_position__icontains=amino_acid_position)
-            serializer = FilterSerializer(A[start:end], many=True)
-
-
-        if strain and lineage:
-            A = tsvfile.objects.filter(lineage__icontains=lineage,strain__icontains=strain)
-            serializer = FilterSerializer(A[start:end], many=True)
-        if strain and gene:
-            A = tsvfile.objects.filter(gene__icontains=gene,strain__icontains=strain)
-            serializer = FilterSerializer(A[start:end], many=True)
-        if strain and reference_id:
-            A = tsvfile.objects.filter(reference_id__icontains=reference_id,strain__icontains=strain)
-            serializer = FilterSerializer(A[start:end], many=True)
-        if strain and mutation:
-            A = tsvfile.objects.filter(strain__icontains=strain,mutation__icontains=mutation)
-            serializer = FilterSerializer(A[start:end], many=True)
-        if strain and amino_acid_position:
-            A = tsvfile.objects.filter(strain__icontains=strain,amino_acid_position__icontains=amino_acid_position)
-            serializer = FilterSerializer(A[start:end], many=True)
-
-
-        if lineage and gene:
-            A = tsvfile.objects.filter(gene__icontains=gene,lineage__icontains=lineage)
-            serializer = FilterSerializer(A[start:end], many=True)
-        if lineage and reference_id:
-            A = tsvfile.objects.filter(reference_id__icontains=reference_id,lineage__icontains=lineage)
-            serializer = FilterSerializer(A[start:end], many=True)
-        if lineage and mutation:
-            A = tsvfile.objects.filter(mutation__icontains=mutation,lineage__icontains=lineage)
-            serializer = FilterSerializer(A[start:end], many=True)
-        if lineage and amino_acid_position:
-            A = tsvfile.objects.filter(amino_acid_position__icontains=amino_acid_position,lineage__icontains=lineage)
-            serializer = FilterSerializer(A[start:end], many=True)
-
-
-        if mutation and gene:
-            A = tsvfile.objects.filter(mutation__icontains=mutation,gene__icontains=gene,)
-            serializer = FilterSerializer(A[start:end], many=True)
-        if mutation and amino_acid_position:
-            A = tsvfile.objects.filter(amino_acid_position__icontains=amino_acid_position,mutation__icontains=mutation)
-            serializer = FilterSerializer(A[start:end], many=True)
-        if mutation and reference_id:
-            A = tsvfile.objects.filter(reference_id__icontains=reference_id,mutation__icontains=mutation)
-            serializer = FilterSerializer(A[start:end], many=True)
-
-
-        if gene and amino_acid_position:
-            A = tsvfile.objects.filter(amino_acid_position__icontains=amino_acid_position,gene__icontains=gene)
-            serializer = FilterSerializer(A[start:end], many=True)
-        if gene and reference_id:
-            A = tsvfile.objects.filter(reference_id__icontains=reference_id,gene__icontains=gene)
-            serializer = FilterSerializer(A[start:end], many=True)
-
-        if reference_id and amino_acid_position:
-            A = tsvfile.objects.filter(amino_acid_position__icontains=amino_acid_position,reference_id__icontains=reference_id)
-            serializer = FilterSerializer(A[start:end], many=True)
-        if mutation and lineage and strain and reference_id and amino_acid_position and gene:
-            A = tsvfile.objects.filter(mutation__icontains=mutation,lineage__icontains=lineage,strain__icontains=strain,reference_id__icontains=reference_id,amino_acid_position__icontains=amino_acid_position,gene__icontains=gene)
-            serializer = FilterSerializer(A[start:end], many=True)
-        if ((not mutation) or (mutation == 'undefined')) and ((not lineage) or (lineage == 'undefined')) and ((not strain) or (strain == 'undefined')) and ((not gene) or (gene == 'undefined')) and ((not reference_id) or (reference_id == 'undefined')) and ((not amino_acid_position) or (amino_acid_position == 'undefined')):
-            A = tsvfile.objects.all()
-            serializer = FilterSerializer(A[start:end], many=True)
-        return Response({"data": serializer.data})
 
 from django_filters import utils
 class Myjangofilter(DjangoFilterBackend):
