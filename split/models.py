@@ -25,13 +25,26 @@ def random_date(start, end, prop):
 
 
 class tsvfile(models.Model):
-    
+    index                       = models.BigIntegerField(primary_key=True)
     strain                      = models.CharField(max_length=300,default=None, blank=True, null=True)
     lineage                     = models.CharField(max_length=225,default=None, blank=True, null=True)
     gene                        = models.CharField(max_length=300,default=None, blank=True, null=True)
     reference_id                = models.CharField(max_length=225,default=None, blank=True, null=True)
-    amine_acid_position         = models.CharField(max_length=225,default=None, blank=True, null=True)
+    amino_acid_position         = models.CharField(max_length=225,default=None, blank=True, null=True)
     mutation                    = models.CharField(max_length=225,default=None, blank=True, null=True)
     date                        = models.DateField(default=None, blank=True,null=True)
+    state                       = models.CharField(max_length=300,default=None, blank=True, null=True)
+    mutation_deletion           = models.CharField(max_length=300,default=None, blank=True, null=True)
     def __str__(self):
         return self.strain
+
+
+class PangoVarsion(models.Model):
+    # index                       = models.BigIntegerField(primary_key=True)
+    version                     = models.CharField(max_length=300,default=None, blank=True, null=True)
+    pangolin_version            = models.CharField(max_length=225,default=None, blank=True, null=True)
+    pangoLEARN_version          = models.CharField(max_length=300,default=None, blank=True, null=True)
+    pango_version               = models.CharField(max_length=225,default=None, blank=True, null=True)
+    date                        = models.DateTimeField(verbose_name ="date", auto_now_add=True)
+    def __str__(self):
+        return self.version

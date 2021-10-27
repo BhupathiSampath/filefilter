@@ -11,7 +11,7 @@ from rest_framework.generics import ListAPIView, RetrieveAPIView
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from split.models import tsvfile
+from split.models import tsvfile, PangoVarsion
 # import sqlalchemy
 from sqlalchemy import create_engine
 from split.api.filetrbackend import DjangoFilterBackend
@@ -25,30 +25,45 @@ from django.db.models import Max
 from splitting.settings import BASE_DIR
 file_name = str(datetime.datetime.today())
 new_file = re.sub('[ ;:]', '_', file_name)
-path = f'{BASE_DIR}/download/tsvfile{new_file}.csv'
+path = f'{BASE_DIR}/downloads/tsvfile{new_file}.csv'
+f_name = f'tsvfile{new_file}.csv'
 class LargeResultsSetPagination(PageNumberPagination):
     page_size = 100
     page_size_query_param = 'page_size'
 class Filterpage(PageNumberPagination):
     page_size = 100
     page_size_query_param = 'page_size'
-    paginated_by = 100
+    # paginated_by = 100
     def get_paginated_response(self, data):
         return Response(OrderedDict([
-            ('path', path)
+            ('path', f_name)
         ]))
 
-
+from django_filters import Filter, FilterSet
+from django_filters.constants import EMPTY_VALUES
+import django_filters
 from datetime import date, timedelta
 from django_filters import rest_framework as filters
+
+class ListFilter(filters.Filter):
+    def filter(self, qs, value):
+        if value in EMPTY_VALUES:
+            return qs
+        value_list = value.split(",")
+        qs = super().filter(qs, value_list)
+        return qs
+
+        
 class LocationFilter(filters.FilterSet):
-    d = date.today()-timedelta(days=7)
-    id = filters.NumberFilter(lookup_expr='icontains')
+    # d = date.today()-timedelta(days=7)
+    index = filters.NumberFilter(lookup_expr='icontains')
+    state = filters.CharFilter(lookup_expr='icontains')
+    mutation_deletion = filters.CharFilter(lookup_expr='icontains')
     strain = filters.CharFilter(lookup_expr='icontains')
-    lineage = filters.CharFilter(lookup_expr='icontains')
+    lineage = ListFilter(field_name="lineage",lookup_expr='in')
     reference_id = filters.CharFilter(lookup_expr='icontains')
     mutation = filters.CharFilter(lookup_expr='icontains')
-    amine_acid_position = filters.CharFilter(lookup_expr='icontains')
+    amino_acid_position = filters.CharFilter(lookup_expr='icontains')
     gene = filters.CharFilter(lookup_expr='icontains')
     date = filters.CharFilter(lookup_expr='icontains')
     start_date = filters.DateFilter(field_name="date",lookup_expr="gte")
@@ -57,51 +72,25 @@ class LocationFilter(filters.FilterSet):
     # d=date.today()-timedelta(days=7)
     class Meta:
         model = tsvfile
-        fields = ['id','date','start_date','end_date','strain','lineage','reference_id','mutation','amine_acid_position','gene',]
+        fields = ['index','date','start_date','end_date','strain','state','lineage','reference_id','mutation','amino_acid_position','gene','mutation_deletion',]
 
 
 class dataserializer(serializers.ModelSerializer):
     class Meta:
         model = tsvfile
-        fields = ('id','date','strain','lineage','reference_id','mutation','amine_acid_position','gene')
+        fields = ('index','date','strain','state','lineage','reference_id','mutation','amino_acid_position','gene','mutation_deletion',)
 
-class LineageFilter(RetrieveAPIView):
-    serializer_class = dataserializer
-    def get(self, request,lineage):
-        A = tsvfile.objects.filter(lineage=lineage)
-        serializer = dataserializer(A, many=True)
-        return Response({"data": serializer.data})
 
 class dateserializer(serializers.ModelSerializer):
     class Meta:
         model = tsvfile
-        fields = ('id','date')
+        fields = ('index','date')
 class max_date(RetrieveAPIView):
     serializer_class = dateserializer
     def get(self, request):
         A = tsvfile.objects.order_by('date').first()
         serializer = dateserializer(A, many=True)
         return Response({"data": serializer.data})
-
-
-class MutationFilter(RetrieveAPIView):
-    serializer_class = dataserializer
-    def get(self, request):
-        A = tsvfile.objects.values('strain').distinct()
-        count = tsvfile.objects.values('strain').distinct().count()
-        serializer = dataserializer(A, many=True)
-        return Response({"data": serializer.data,"count": count})
-
-
-class Filter1(RetrieveAPIView):
-    serializer_class = dataserializer
-    def get(self, request):
-        A = tsvfile.objects.all()[0:20]
-        serializer = dataserializer(A, many=True)
-        return Response({"data": serializer.data})
-
-
-
 
 
 class FilterSerializer(serializers.ModelSerializer):
@@ -117,14 +106,15 @@ class FilterSerializer1(serializers.ModelSerializer):
 
 from dateutil.relativedelta import *    
 class filter2(ListAPIView):
-    serializer_class = FilterSerializer1
+    serializer_class = dataserializer
     pagination_class = LargeResultsSetPagination
     filter_backends = (DjangoFilterBackend,SearchFilter,OrderingFilter)
     filter_class = LocationFilter
-    filter_fields = ('id','date','start_date','end_date','strain','lineage','reference_id','mutation','amine_acid_position','gene',)
-    search_fields = ('id','date','strain','lineage','reference_id','mutation','amine_acid_position','gene',)
-    ordering_fields = ['id','date','strain','lineage','reference_id','mutation','amine_acid_position','gene',]
+    filter_fields = ('index','date','start_date','end_date','strain','state','lineage','reference_id','mutation','amino_acid_position','gene','mutation_deletion',)
+    search_fields = ('index','date','strain','state','lineage','reference_id','mutation','amino_acid_position','gene','mutation_deletion',)
+    ordering_fields = ['index','date','strain','state','lineage','reference_id','mutation','amino_acid_position','gene','mutation_deletion',]
     def get_queryset(self):
+         
         days = int(self.request.GET.get('days',3650))
         days=date.today()-timedelta(days=days)
         QuerySet = tsvfile.objects.filter(date__gte=days)
@@ -144,14 +134,14 @@ class Filter(APIView):
         mutation = request.data.get('mutation')
         gene = request.data.get('gene')
         reference_id = request.data.get('reference_id')
-        amine_acid_position = request.data.get('amine_acid_position')
+        amino_acid_position = request.data.get('amino_acid_position')
         search = request.data.get('search', "")
         page = int(request.data.get('page', 1))
         per_page = 100
         start = (page -1)* per_page
         end = page*per_page
         if search:
-            A = tsvfile.objects.filter(Q(mutation__icontains=search) | Q(lineage__icontains=search) | Q(strain__icontains=search) | Q(reference_id__icontains=search) | Q(amine_acid_position__icontains=search) | Q(gene__icontains=search))
+            A = tsvfile.objects.filter(Q(mutation__icontains=search) | Q(lineage__icontains=search) | Q(strain__icontains=search) | Q(reference_id__icontains=search) | Q(amino_acid_position__icontains=search) | Q(gene__icontains=search))
             serializer = FilterSerializer(A[start:end], many=True)
         if strain:
             A = tsvfile.objects.filter(strain__icontains=strain)
@@ -168,8 +158,8 @@ class Filter(APIView):
         if mutation:
             A = tsvfile.objects.filter(mutation__icontains=mutation)
             serializer = FilterSerializer(A[start:end], many=True)
-        if amine_acid_position:
-            A = tsvfile.objects.filter(amine_acid_position__icontains=amine_acid_position)
+        if amino_acid_position:
+            A = tsvfile.objects.filter(amino_acid_position__icontains=amino_acid_position)
             serializer = FilterSerializer(A[start:end], many=True)
 
 
@@ -185,8 +175,8 @@ class Filter(APIView):
         if strain and mutation:
             A = tsvfile.objects.filter(strain__icontains=strain,mutation__icontains=mutation)
             serializer = FilterSerializer(A[start:end], many=True)
-        if strain and amine_acid_position:
-            A = tsvfile.objects.filter(strain__icontains=strain,amine_acid_position__icontains=amine_acid_position)
+        if strain and amino_acid_position:
+            A = tsvfile.objects.filter(strain__icontains=strain,amino_acid_position__icontains=amino_acid_position)
             serializer = FilterSerializer(A[start:end], many=True)
 
 
@@ -199,42 +189,43 @@ class Filter(APIView):
         if lineage and mutation:
             A = tsvfile.objects.filter(mutation__icontains=mutation,lineage__icontains=lineage)
             serializer = FilterSerializer(A[start:end], many=True)
-        if lineage and amine_acid_position:
-            A = tsvfile.objects.filter(amine_acid_position__icontains=amine_acid_position,lineage__icontains=lineage)
+        if lineage and amino_acid_position:
+            A = tsvfile.objects.filter(amino_acid_position__icontains=amino_acid_position,lineage__icontains=lineage)
             serializer = FilterSerializer(A[start:end], many=True)
 
 
         if mutation and gene:
             A = tsvfile.objects.filter(mutation__icontains=mutation,gene__icontains=gene,)
             serializer = FilterSerializer(A[start:end], many=True)
-        if mutation and amine_acid_position:
-            A = tsvfile.objects.filter(amine_acid_position__icontains=amine_acid_position,mutation__icontains=mutation)
+        if mutation and amino_acid_position:
+            A = tsvfile.objects.filter(amino_acid_position__icontains=amino_acid_position,mutation__icontains=mutation)
             serializer = FilterSerializer(A[start:end], many=True)
         if mutation and reference_id:
             A = tsvfile.objects.filter(reference_id__icontains=reference_id,mutation__icontains=mutation)
             serializer = FilterSerializer(A[start:end], many=True)
 
 
-        if gene and amine_acid_position:
-            A = tsvfile.objects.filter(amine_acid_position__icontains=amine_acid_position,gene__icontains=gene)
+        if gene and amino_acid_position:
+            A = tsvfile.objects.filter(amino_acid_position__icontains=amino_acid_position,gene__icontains=gene)
             serializer = FilterSerializer(A[start:end], many=True)
         if gene and reference_id:
             A = tsvfile.objects.filter(reference_id__icontains=reference_id,gene__icontains=gene)
             serializer = FilterSerializer(A[start:end], many=True)
 
-        if reference_id and amine_acid_position:
-            A = tsvfile.objects.filter(amine_acid_position__icontains=amine_acid_position,reference_id__icontains=reference_id)
+        if reference_id and amino_acid_position:
+            A = tsvfile.objects.filter(amino_acid_position__icontains=amino_acid_position,reference_id__icontains=reference_id)
             serializer = FilterSerializer(A[start:end], many=True)
-        if mutation and lineage and strain and reference_id and amine_acid_position and gene:
-            A = tsvfile.objects.filter(mutation__icontains=mutation,lineage__icontains=lineage,strain__icontains=strain,reference_id__icontains=reference_id,amine_acid_position__icontains=amine_acid_position,gene__icontains=gene)
+        if mutation and lineage and strain and reference_id and amino_acid_position and gene:
+            A = tsvfile.objects.filter(mutation__icontains=mutation,lineage__icontains=lineage,strain__icontains=strain,reference_id__icontains=reference_id,amino_acid_position__icontains=amino_acid_position,gene__icontains=gene)
             serializer = FilterSerializer(A[start:end], many=True)
-        if ((not mutation) or (mutation == 'undefined')) and ((not lineage) or (lineage == 'undefined')) and ((not strain) or (strain == 'undefined')) and ((not gene) or (gene == 'undefined')) and ((not reference_id) or (reference_id == 'undefined')) and ((not amine_acid_position) or (amine_acid_position == 'undefined')):
+        if ((not mutation) or (mutation == 'undefined')) and ((not lineage) or (lineage == 'undefined')) and ((not strain) or (strain == 'undefined')) and ((not gene) or (gene == 'undefined')) and ((not reference_id) or (reference_id == 'undefined')) and ((not amino_acid_position) or (amino_acid_position == 'undefined')):
             A = tsvfile.objects.all()
             serializer = FilterSerializer(A[start:end], many=True)
         return Response({"data": serializer.data})
 
-
+from django_filters import utils
 class Myjangofilter(DjangoFilterBackend):
+    filter_backends = (DjangoFilterBackend,SearchFilter,OrderingFilter)
     def filter_queryset(self, request, queryset, view):
         filterset = self.get_filterset(request, queryset, view)
         if filterset is None:
@@ -245,21 +236,72 @@ class Myjangofilter(DjangoFilterBackend):
         df  = pd.DataFrame.from_records(filterset.qs.values())
         
         df.to_csv(path,index=False)
-        print(path)
+        # print(path)
         return filterset.qs
 
 class exportcsv(ListAPIView):
     serializer_class = dataserializer
     pagination_class = Filterpage
-    filter_backends = [Myjangofilter]
+    filter_backends = (Myjangofilter,SearchFilter,OrderingFilter)
     filterset_class = LocationFilter
     
-    filter_fields = ('id','date','start_date','end_date','strain','lineage','reference_id','mutation','amine_acid_position','gene',)
-    search_fields = ('id','date','strain','lineage','reference_id','mutation','amine_acid_position','gene',)
-    ordering_fields = ['id','date','strain','lineage','reference_id','mutation','amine_acid_position','gene',]
+    filter_fields = ('index','date','start_date','end_date','strain','state','lineage','reference_id','mutation','amino_acid_position','gene','mutation_deletion',)
+    search_fields = ('index','date','strain','state','lineage','reference_id','mutation','amino_acid_position','gene','mutation_deletion',)
+    ordering_fields = ['index','date','strain','state','lineage','reference_id','mutation','amino_acid_position','gene','mutation_deletion',]
     def get_queryset(self):
-        days = int(self.request.GET.get('days',3650))
+        days = int(self.request.GET.get('days'))
         days=date.today()-timedelta(days=days)
         QuerySet = tsvfile.objects.filter(date__gte=days)
         return QuerySet
 
+
+
+
+class count(PageNumberPagination):
+    page_size = 100
+    page_size_query_param = 'page_size'
+    # paginated_by = 100
+    def get_paginated_response(self, data):
+        return Response(OrderedDict([
+            ('count', self.page.paginator.count)
+        ]))
+
+
+
+class strainserializer(serializers.ModelSerializer):
+    class Meta:
+        model = tsvfile
+        fields = ('strain',)
+class uniqeseq(ListAPIView):
+    serializer_class = strainserializer
+    pagination_class = count
+    def get_queryset(self):
+        QuerySet = tsvfile.objects.order_by().values('strain').distinct()
+        return QuerySet
+
+
+
+class lineageserializer(serializers.ModelSerializer):
+    class Meta:
+        model = tsvfile
+        fields = ('lineage',)
+class uniqelineage(ListAPIView):
+    serializer_class = lineageserializer
+    pagination_class = LargeResultsSetPagination
+    def get_queryset(self):
+        QuerySet = tsvfile.objects.order_by().values('lineage').distinct()
+        return QuerySet
+
+
+class PangoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PangoVarsion
+        fields = "__all__"
+
+
+class Pangovarsionlist(ListAPIView):
+    serializer_class = PangoSerializer
+    pagination_class = LargeResultsSetPagination
+    def get_queryset(self):
+        QuerySet = PangoVarsion.objects.all().extra(select={'date':'DATE(date)'}).order_by('-id')[0:1]
+        return QuerySet

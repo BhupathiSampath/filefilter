@@ -3,7 +3,7 @@ import pandas as pd
 from rest_framework import generics
 # import sqlalchemy
 from sqlalchemy import create_engine
-from split.models import tsvfile
+from split.models import tsvfile,PangoVarsion
 from django.core.management.base import BaseCommand
 
 # Create your views here.
@@ -15,12 +15,13 @@ class Command(BaseCommand):
         df.to_sql(tsvfile._meta.db_table, con=engine,index=True, if_exists='replace')
 
 
-
+import datetime
 from rest_framework import serializers
 from rest_framework.response import Response
 from rest_framework import serializers
 class fileserializer(serializers.Serializer):
     file = serializers.FileField()
+    file_version = serializers.FileField()
 class uploadserializer(serializers.Serializer):
     
     class Meta:
@@ -37,37 +38,49 @@ class adddata(generics.CreateAPIView):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception = True)
         file = serializer.validated_data['file']
+        file_version = serializer.validated_data['file_version']
         reader = pd.read_csv(file, sep='\t', header=0)
-        reader[['gene','reference_id','amine_acid_position','mutation']] = reader['mutation/deletion'].str.split(':([a-zA-Z]+)([0-9]+)', n=1, expand=True)
+        reader1 = pd.read_csv(file_version, header=0, nrows=1)
+        # reader[['mutation_deletion']] = reader['mutation/deletion']
+        reader[['gene','reference_id','amino_acid_position','mutation']] = reader['mutation/deletion'].str.split(':([a-zA-Z]+)([0-9]+)', n=1, expand=True)
+        reader.rename(columns = {'mutation/deletion':'mutation_deletion'}, inplace = True)
+        engine = create_engine('sqlite:///db.sqlite3')
+        tsvfile(reader.to_sql(tsvfile._meta.db_table, con=engine,index=True, if_exists='replace'))
+        # PangoVarsion(reader1.to_sql(PangoVarsion._meta.db_table, con=engine,index=True, if_exists='replace'))
 
-        # engine = create_engine('sqlite:///db.sqlite3')
-        # tsvfile(reader.to_sql(tsvfile._meta.db_table, con=engine,index=True, if_exists='replace'))
-
-        # tsvfile.objects.bulk_create([tsvfile(strain=reader.strain,lineage=reader.lineage,mutation_deletion=reader.mutation_deletion)])
-        # for index, row in reader.iterrows():
-        #     new_file = tsvfile(
-        #         strain = row['strain'],
-        #         lineage = row['lineage'],
-        #         mutation_deletion = row['mutation_deletion']
+        # objs = [
+        #     tsvfile(
+        #         strain = row.strain,
+        #         lineage = row.lineage,
+        #         gene = row.gene,
+        #         reference_id = row.reference_id,
+        #         amino_acid_position = row.amino_acid_position,
+        #         mutation = row.mutation,
+        #         date = row.date,
+        #         state = row.state,
+        #         mutation_deletion = row.mutation_deletion
         #     )
+        #     for index, row in reader.iterrows()
+            
+        # ]
+        # # try:
+        # tsvfile.objects.bulk_create(objs)
         
-        # bulk = tsvfile.objects.bulk_create([reader])
-        # print(reader)
+
+
         objs = [
-            tsvfile(
-                strain = row.strain,
-                lineage = row.lineage,
-                gene = row.gene,
-                reference_id = row.reference_id,
-                amine_acid_position = row.amine_acid_position,
-                mutation = row.mutation,
-                date = row.date
+            PangoVarsion(
+                version = row.version,
+                pangolin_version = row.pangolin_version,
+                pangoLEARN_version = row.pangoLEARN_version,
+                pango_version = row.pango_version,
+                date = datetime.datetime.today()
             )
-            for index, row in reader.iterrows()
+            for index, row in reader1.iterrows()
             
         ]
         # try:
-        tsvfile.objects.bulk_create(objs)
+        PangoVarsion.objects.bulk_create(objs)
         returnmsg = {"message": "success"}
         # except Exception as e:
         #     returnmsg = {"message": "Importing error"}

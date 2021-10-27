@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 
-from split.models import tsvfile
+from split.models import tsvfile,PangoVarsion
 # Register your models here.
 # class tsvfile(tsvfile):
 #     list_display = ('index', 'strain','lineage','mutation_deletion')
@@ -13,3 +13,4 @@ from split.models import tsvfile
 #     fieldsets = ()
 
 admin.site.register(tsvfile)
+admin.site.register(PangoVarsion)
