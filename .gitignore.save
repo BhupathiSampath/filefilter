@@ -129,10 +129,8 @@ venv.bak/
 mafenv/
 .download
 download/
-.virtual_env
-virtual_env/
-filter_env/
 .filter_env
+filter_env/
 
 
 # Spyder project settings
