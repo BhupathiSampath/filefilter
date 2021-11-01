@@ -42,7 +42,12 @@ class adddata(generics.CreateAPIView):
         reader = pd.read_csv(file, sep='\t', header=0)
         reader1 = pd.read_csv(file_version, header=0, nrows=1)
         # reader[['mutation_deletion']] = reader['mutation/deletion']
-        reader[['gene','reference_id','amino_acid_position','mutation']] = reader['mutation/deletion'].str.split(':([a-zA-Z]+)([0-9]+)', n=1, expand=True)
+        # reader[['gene','mutation_deletion']] = reader['mutation_deletion'].str.split(':',n=1, expand=True)
+        # print(reader)
+        # reader[['reference_id','amino_acid_position','mutation']] = reader['mutation_deletion'].str.split('([*][a-zA-Z]+)([0-9]+)', n=1, expand=True)
+        # print(reader)
+        # reader[['reference_id','amino_acid_position','mutation']] = (re.split('\d+([0-9]+)', reader["mutation_deletion"], 2))
+        reader[['gene','reference_id','amino_acid_position','mutation']] = reader['mutation/deletion'].str.split(':([a-zA-Z*]+)([0-9]+)', n=1, expand=True)
         reader.rename(columns = {'mutation/deletion':'mutation_deletion'}, inplace = True)
         engine = create_engine('sqlite:///db.sqlite3')
         tsvfile(reader.to_sql(tsvfile._meta.db_table, con=engine,index=True, if_exists='replace'))
