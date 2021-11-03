@@ -27,7 +27,7 @@ file_name = str(datetime.datetime.today())
 new_file = re.sub('[ ;:]', '_', file_name)
 path = f'{BASE_DIR}/downloads/tsvfile{new_file}.csv'
 f_name = f'tsvfile{new_file}.csv'
-class LargeResultsSetPagination(PageNumberPagination):
+class LargeResultsSetPagination(PageNumberPagination):  
     page_size = 100
     page_size_query_param = 'page_size'
 class Filterpage(PageNumberPagination):
@@ -121,12 +121,28 @@ class Filter(ListAPIView):
         QuerySet = tsvfile.objects.filter(date__gte=days)
         return QuerySet
     
+def getdata(request):
+    serializer_class = dataserializer
+    pagination_class = LargeResultsSetPagination
+    filter_backends = (DjangoFilterBackend,SearchFilter,OrderingFilter)
+    filter_class = LocationFilter
+    filter_fields = ('index','date','start_date','end_date','strain','state','lineage','reference_id','mutation','amino_acid_position','gene','mutation_deletion',)
+    search_fields = ('index','date','strain','state','lineage','reference_id','mutation','amino_acid_position','gene','mutation_deletion',)
+    ordering_fields = ['index','date','strain','state','lineage','reference_id','mutation','amino_acid_position','gene','mutation_deletion',]
+    # days = int(request.GET.get('days',3650))
+    # days=date.today()-timedelta(days=days)
+    QuerySet = tsvfile.objects.filter(lineage="")
+    serializer = dataserializer(QuerySet, many =True)
+    print(serializer.data)
+    return Response({"data":serializer.data})
+
+
 
 
 
 from django_filters import utils
 class Myjangofilter(DjangoFilterBackend):
-    filter_backends = (DjangoFilterBackend,SearchFilter,OrderingFilter)
+    # filter_backends = (DjangoFilterBackend,SearchFilter,OrderingFilter)
     def filter_queryset(self, request, queryset, view):
         filterset = self.get_filterset(request, queryset, view)
         if filterset is None:

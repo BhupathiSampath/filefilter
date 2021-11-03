@@ -3,7 +3,7 @@ from django.urls import path, include, re_path
 from django.conf.urls import url
 # from tsvfile.management.commands.add_data import Command
 from split.api.add_data import adddata
-from split.api.filtered_data import max_date, Filter,exportcsv,uniqeseq, uniqelineage, Pangovarsionlist
+from split.api.filtered_data import max_date, Filter,exportcsv,uniqeseq, uniqelineage, Pangovarsionlist, getdata
 # from split.api.filetrbackend import RestView
 urlpatterns = [
     path('adddata/', adddata.as_view(), name='adddata'),
@@ -13,4 +13,5 @@ urlpatterns = [
     path('count/', uniqeseq.as_view(), name='count'),
     path('lineagedrop/', uniqelineage.as_view(), name='lineagedrop'),
     path('pangoversion/', Pangovarsionlist.as_view(), name='pangoversion'),
+    path('getdata/', getdata, name='getdata'),
 ]
