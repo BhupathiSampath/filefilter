@@ -30,7 +30,7 @@ class tsvfile(models.Model):
     lineage                     = models.CharField(max_length=225,default=None, blank=True, null=True)
     gene                        = models.CharField(max_length=300,default=None, blank=True, null=True)
     reference_id                = models.CharField(max_length=225,default=None, blank=True, null=True)
-    amino_acid_position         = models.CharField(max_length=225,default=None, blank=True, null=True)
+    amino_acid_position         = models.IntegerField(default=None, blank=True, null=True)
     mutation                    = models.CharField(max_length=225,default=None, blank=True, null=True)
     date                        = models.DateField(default=None, blank=True,null=True)
     state                       = models.CharField(max_length=300,default=None, blank=True, null=True)

@@ -1,4 +1,5 @@
 from django.db.models.query import QuerySet
+from django.http import request
 import pandas as pd
 from django.db.models import fields
 from django.http.response import HttpResponse, JsonResponse
@@ -76,6 +77,7 @@ class LocationFilter(filters.FilterSet):
         fields = ['index','date','start_date','end_date','strain','state','lineage','reference_id','mutation','amino_acid_position','gene','mutation_deletion',]
 
 
+
 class dataserializer(serializers.ModelSerializer):
     class Meta:
         model = tsvfile
@@ -120,22 +122,46 @@ class Filter(ListAPIView):
         days=date.today()-timedelta(days=days)
         QuerySet = tsvfile.objects.filter(date__gte=days)
         return QuerySet
-    
-def getdata(request):
+
+
+class AdvanceFilter(filters.FilterSet):
+    class Meta:
+        model = tsvfile
+        fields = {'strain': ['iexact','exact', 'icontains','contains', 'startswith', 'isnull'], 'lineage': ['iexact', 'icontains','contains', 'startswith'], 
+                'state': ['iexact', 'icontains','contains', 'startswith'], 'mutation_deletion': ['iexact', 'icontains','contains', 'startswith'], 
+                'gene': ['iexact', 'icontains','contains', 'startswith'],'reference_id': ['iexact', 'icontains','contains', 'startswith'],
+                'amino_acid_position': ['iexact', 'icontains', 'startswith', 'gte', 'lte', 'gt', 'lt'],'mutation': ['iexact', 'icontains','contains', 'startswith'], 
+                'date': ['iexact', 'icontains','contains', 'startswith', 'lte', 'gte', 'lt', 'gt']}
+        # filter_fields = ('index','date','start_date','end_date','strain','state','lineage','reference_id','mutation','amino_acid_position','gene','mutation_deletion',)
+
+class AdvanceFiltering(ListAPIView):
     serializer_class = dataserializer
     pagination_class = LargeResultsSetPagination
     filter_backends = (DjangoFilterBackend,SearchFilter,OrderingFilter)
-    filter_class = LocationFilter
+    filter_class = AdvanceFilter
+    # filter_fields = LocationFilter
     filter_fields = ('index','date','start_date','end_date','strain','state','lineage','reference_id','mutation','amino_acid_position','gene','mutation_deletion',)
     search_fields = ('index','date','strain','state','lineage','reference_id','mutation','amino_acid_position','gene','mutation_deletion',)
     ordering_fields = ['index','date','strain','state','lineage','reference_id','mutation','amino_acid_position','gene','mutation_deletion',]
-    # days = int(request.GET.get('days',3650))
-    # days=date.today()-timedelta(days=days)
-    QuerySet = tsvfile.objects.filter(lineage="")
-    serializer = dataserializer(QuerySet, many =True)
-    print(serializer.data)
-    return Response({"data":serializer.data})
+    def get_queryset(self):
+         
+        days = int(self.request.GET.get('days',3650))
+        days=date.today()-timedelta(days=days)
+        QuerySet = tsvfile.objects.filter(date__gte=days)
+        return QuerySet
 
+from django.db.models import Q
+def getdata():
+    # search = request.GET.get('search', "")
+    search = "2021-09-17"
+    page = 1
+    per_page = 100
+    start = (page-1)* per_page
+    end = page*per_page
+    QuerySet = tsvfile.objects.filter(Q(strain__icontains=search) | Q(lineage__icontains=search) | Q(date__icontains=search) | Q(mutation_deletion__icontains=search))
+    print({"count":QuerySet.count(), "results": QuerySet.values()[0:5][start:end]})
+    return QuerySet
+getdata()
 
 
 
@@ -166,7 +192,7 @@ class exportcsv(ListAPIView):
     search_fields = ('index','date','strain','state','lineage','reference_id','mutation','amino_acid_position','gene','mutation_deletion',)
     ordering_fields = ['index','date','strain','state','lineage','reference_id','mutation','amino_acid_position','gene','mutation_deletion',]
     def get_queryset(self):
-        days = int(self.request.GET.get('days'))
+        days = int(self.request.GET.get('days', 3650))
         days=date.today()-timedelta(days=days)
         QuerySet = tsvfile.objects.filter(date__gte=days)
         return QuerySet
