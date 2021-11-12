@@ -1,3 +1,4 @@
+from django.db.models.aggregates import Count
 from django.db.models.query import QuerySet
 from django.http import request
 import pandas as pd
@@ -81,7 +82,7 @@ class LocationFilter(filters.FilterSet):
 class dataserializer(serializers.ModelSerializer):
     class Meta:
         model = tsvfile
-        fields = ('index','date','strain','state','lineage','reference_id','mutation','amino_acid_position','gene','mutation_deletion',)
+        fields = ('date','strain','state','lineage','reference_id','mutation','amino_acid_position','gene','mutation_deletion',)
 
 
 class dateserializer(serializers.ModelSerializer):
@@ -144,13 +145,17 @@ class AdvanceFiltering(ListAPIView):
     search_fields = ('index','date','strain','state','lineage','reference_id','mutation','amino_acid_position','gene','mutation_deletion',)
     ordering_fields = ['index','date','strain','state','lineage','reference_id','mutation','amino_acid_position','gene','mutation_deletion',]
     def get_queryset(self):
-         
         days = int(self.request.GET.get('days',3650))
         days=date.today()-timedelta(days=days)
         QuerySet = tsvfile.objects.filter(date__gte=days)
         return QuerySet
 
 from django.db.models import Q
+serializer_class = dataserializer
+pagination_class = LargeResultsSetPagination
+filter_backends = (DjangoFilterBackend,SearchFilter,OrderingFilter)
+filter_class = LocationFilter
+search_fields = ('index','date','strain','state','lineage','reference_id','mutation','amino_acid_position','gene','mutation_deletion',)
 def getdata():
     # search = request.GET.get('search', "")
     search = "2021-09-17"
@@ -159,6 +164,7 @@ def getdata():
     start = (page-1)* per_page
     end = page*per_page
     QuerySet = tsvfile.objects.filter(Q(strain__icontains=search) | Q(lineage__icontains=search) | Q(date__icontains=search) | Q(mutation_deletion__icontains=search))
+    # QuerySet = tsvfile.objects.filter(search='255')
     print({"count":QuerySet.count(), "results": QuerySet.values()[0:5][start:end]})
     return QuerySet
 getdata()
@@ -248,3 +254,34 @@ class Pangovarsionlist(ListAPIView):
     def get_queryset(self):
         QuerySet = PangoVarsion.objects.all().extra(select={'date':'DATE(date)'}).order_by('-id')[0:1]
         return QuerySet
+
+
+class stateserializer(serializers.ModelSerializer):
+    count = serializers.IntegerField(read_only=True,)
+    class Meta:
+        model = tsvfile
+        fields = ("state","count",)
+
+class StateData1(ListAPIView):
+    serializer_class = stateserializer
+    # pagination_class = LargeResultsSetPagination
+    def get(request):
+        QuerySet = tsvfile.objects.raw('select state,count(state),"index" from split_tsvfile group by state')
+        return QuerySet
+
+class StateData(RetrieveAPIView):
+
+    def get(self, request):
+        QuerySet = tsvfile.objects.raw('select state,count(state) as count,"index" from split_tsvfile group by state')
+        # print(dir(QuerySet.columns.count))
+        serializer = stateserializer(QuerySet, many =True)
+        print(pd.DataFrame(serializer.data))
+        return Response({"data": serializer.data})
+import matplotlib.pyplot as plt
+class graph(RetrieveAPIView):
+    def get(self, request):
+        QuerySet = tsvfile.objects.raw('select state,count(state) as count,"index" from split_tsvfile group by state')
+        serializer = stateserializer(QuerySet, many =True)
+        df = pd.DataFrame(serializer.data)
+        print(df.plot(kind='pie',y='count', figsize=(15, 15)))
+        # print(df)
