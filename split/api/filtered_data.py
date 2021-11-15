@@ -156,18 +156,19 @@ pagination_class = LargeResultsSetPagination
 filter_backends = (DjangoFilterBackend,SearchFilter,OrderingFilter)
 filter_class = LocationFilter
 search_fields = ('index','date','strain','state','lineage','reference_id','mutation','amino_acid_position','gene','mutation_deletion',)
-def getdata():
-    # search = request.GET.get('search', "")
-    search = "2021-09-17"
-    page = 1
-    per_page = 100
-    start = (page-1)* per_page
-    end = page*per_page
-    QuerySet = tsvfile.objects.filter(Q(strain__icontains=search) | Q(lineage__icontains=search) | Q(date__icontains=search) | Q(mutation_deletion__icontains=search))
-    # QuerySet = tsvfile.objects.filter(search='255')
-    print({"count":QuerySet.count(), "results": QuerySet.values()[0:5][start:end]})
-    return QuerySet
-getdata()
+
+# def getdata():
+#     # search = request.GET.get('search', "")
+#     search = "2021-09-17"
+#     page = 1
+#     per_page = 100
+#     start = (page-1)* per_page
+#     end = page*per_page
+#     QuerySet = tsvfile.objects.filter(Q(strain__icontains=search) | Q(lineage__icontains=search) | Q(date__icontains=search) | Q(mutation_deletion__icontains=search))
+#     # QuerySet = tsvfile.objects.filter(search='255')
+#     print({"count":QuerySet.count(), "results": QuerySet.values()[0:5][start:end]})
+#     return QuerySet
+# getdata()
 
 
 
@@ -275,13 +276,13 @@ class StateData(RetrieveAPIView):
         QuerySet = tsvfile.objects.raw('select state,count(state) as count,"index" from split_tsvfile group by state')
         # print(dir(QuerySet.columns.count))
         serializer = stateserializer(QuerySet, many =True)
-        print(pd.DataFrame(serializer.data))
+        # print(pd.DataFrame(serializer.data))
         return Response({"data": serializer.data})
-import matplotlib.pyplot as plt
-class graph(RetrieveAPIView):
-    def get(self, request):
-        QuerySet = tsvfile.objects.raw('select state,count(state) as count,"index" from split_tsvfile group by state')
-        serializer = stateserializer(QuerySet, many =True)
-        df = pd.DataFrame(serializer.data)
-        print(df.plot(kind='pie',y='count', figsize=(15, 15)))
-        # print(df)
+# import matplotlib.pyplot as plt
+# class graph(RetrieveAPIView):
+#     def get(self, request):
+#         QuerySet = tsvfile.objects.raw('select state,count(state) as count,"index" from split_tsvfile group by state')
+#         serializer = stateserializer(QuerySet, many =True)
+#         df = pd.DataFrame(serializer.data)
+#         print(df.plot(kind='pie',y='count', figsize=(15, 15)))
+#         # print(df)
