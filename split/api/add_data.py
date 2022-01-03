@@ -21,7 +21,7 @@ from rest_framework.response import Response
 from rest_framework import serializers
 class fileserializer(serializers.Serializer):
     file = serializers.FileField()
-    file_version = serializers.FileField()
+    # file_version = serializers.FileField()
 class uploadserializer(serializers.Serializer):
     
     class Meta:
@@ -38,9 +38,9 @@ class adddata(generics.CreateAPIView):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception = True)
         file = serializer.validated_data['file']
-        file_version = serializer.validated_data['file_version']
+        # file_version = serializer.validated_data['file_version']
         reader = pd.read_csv(file, sep='\t', header=0)
-        reader1 = pd.read_csv(file_version, header=0, nrows=1)
+        # reader1 = pd.read_csv(file_version, header=0, nrows=1)
         # reader[['mutation_deletion']] = reader['mutation/deletion']
         # reader[['gene','mutation_deletion']] = reader['mutation_deletion'].str.split(':',n=1, expand=True)
         # print(reader)
@@ -73,19 +73,19 @@ class adddata(generics.CreateAPIView):
         
 
 
-        objs = [
-            PangoVarsion(
-                version = row.version,
-                pangolin_version = row.pangolin_version,
-                pangoLEARN_version = row.pangoLEARN_version,
-                pango_version = row.pango_version,
-                date = datetime.datetime.today()
-            )
-            for index, row in reader1.iterrows()
+        # objs = [
+        #     PangoVarsion(
+        #         version = row.version,
+        #         pangolin_version = row.pangolin_version,
+        #         pangoLEARN_version = row.pangoLEARN_version,
+        #         pango_version = row.pango_version,
+        #         date = datetime.datetime.today()
+        #     )
+        #     for index, row in reader1.iterrows()
             
-        ]
-        # try:
-        PangoVarsion.objects.bulk_create(objs)
+        # ]
+        # # try:
+        # PangoVarsion.objects.bulk_create(objs)
         returnmsg = {"message": "success"}
         # except Exception as e:
         #     returnmsg = {"message": "Importing error"}

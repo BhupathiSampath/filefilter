@@ -1,4 +1,5 @@
-from django.db.models.aggregates import Count
+# from django.db.models.aggregates import Count
+from django.db.models import Count
 from django.db.models.query import QuerySet
 from django.http import request
 import pandas as pd
@@ -7,6 +8,8 @@ from django.http.response import HttpResponse, JsonResponse
 from django.shortcuts import redirect, render
 from django_filters.rest_framework import DjangoFilterBackend
 from pandas.core.frame import DataFrame
+from pandas.core.indexes.base import Index
+from pandas.io import json
 from rest_framework import generics, pagination, serializers
 from rest_framework.filters import SearchFilter, OrderingFilter
 from rest_framework.generics import ListAPIView, RetrieveAPIView
@@ -124,6 +127,41 @@ class Filter(ListAPIView):
         QuerySet = tsvfile.objects.filter(date__gte=days)
         return QuerySet
 
+import datetime as dt
+class Distribution(ListAPIView):
+    serializer_class = dataserializer
+    pagination_class = LargeResultsSetPagination
+    filter_backends = (DjangoFilterBackend,SearchFilter,OrderingFilter)
+    filter_class = LocationFilter
+    filter_fields = ('index','date','start_date','end_date','strain','state','lineage','reference_id','mutation','amino_acid_position','gene','mutation_deletion',)
+    search_fields = ('index','date','strain','state','lineage','reference_id','mutation','amino_acid_position','gene','mutation_deletion',)
+    ordering_fields = ['index','date','strain','state','lineage','reference_id','mutation','amino_acid_position','gene','mutation_deletion',]
+    def get(self,request):
+
+        # return Filter.queryset
+         
+        days = int(self.request.GET.get('days',3650))
+        state = self.request.GET.get('state',)
+        # strain = self.request.GET.get('strain',ListFilter(field_name="strain",lookup_expr='icontains'))
+        # lineage = self.request.GET.get('lineage',)
+        days=date.today()-timedelta(days=days)
+        QuerySet = tsvfile.objects.filter(date__gte=days,state=state)
+        QuerySet = pd.DataFrame(list(QuerySet.values()))
+        # print(df)
+
+        QuerySet['date'] = pd.to_datetime(QuerySet.date, format='%Y-%m-%d')
+        QuerySet['Week_Number'] = QuerySet['date'].dt.isocalendar().week
+        QuerySet["year"] = QuerySet["date"].dt.isocalendar().year
+        QuerySet["year"] = QuerySet["year"].apply(str)
+        QuerySet["Week_Number"]= QuerySet["Week_Number"].apply(str)
+        QuerySet["Week_Number"]= QuerySet["year"] + "-" + QuerySet["Week_Number"]
+        QuerySet = QuerySet['strain'].groupby(QuerySet['Week_Number']).nunique().reset_index(name="week_data")
+        QuerySet = QuerySet.to_dict("r")
+        return Response({"data": QuerySet})
+
+
+
+
 
 class AdvanceFilter(filters.FilterSet):
     class Meta:
@@ -189,6 +227,7 @@ class Myjangofilter(DjangoFilterBackend):
         # print(path)
         return filterset.qs
 
+
 class exportcsv(ListAPIView):
     serializer_class = dataserializer
     pagination_class = Filterpage
@@ -237,7 +276,7 @@ class lineageserializer(serializers.ModelSerializer):
         fields = ('lineage',)
 class uniqelineage(ListAPIView):
     serializer_class = lineageserializer
-    pagination_class = LargeResultsSetPagination
+    pagination_class = count
     def get_queryset(self):
         QuerySet = tsvfile.objects.order_by().values('lineage').distinct()
         return QuerySet
@@ -271,18 +310,12 @@ class StateData1(ListAPIView):
         return QuerySet
 
 class StateData(RetrieveAPIView):
-
+    serializer_class = stateserializer
+    pagination_class = LargeResultsSetPagination
     def get(self, request):
         QuerySet = tsvfile.objects.raw('select state,count(state) as count,"index" from split_tsvfile group by state')
         # print(dir(QuerySet.columns.count))
         serializer = stateserializer(QuerySet, many =True)
-        # print(pd.DataFrame(serializer.data))
         return Response({"data": serializer.data})
-# import matplotlib.pyplot as plt
-# class graph(RetrieveAPIView):
-#     def get(self, request):
-#         QuerySet = tsvfile.objects.raw('select state,count(state) as count,"index" from split_tsvfile group by state')
-#         serializer = stateserializer(QuerySet, many =True)
-#         df = pd.DataFrame(serializer.data)
-#         print(df.plot(kind='pie',y='count', figsize=(15, 15)))
-#         # print(df)
+
+        
