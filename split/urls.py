@@ -4,7 +4,7 @@ from django.conf.urls import url
 # from tsvfile.management.commands.add_data import Command
 from split.api.add_data import adddata
 from split.api.filtered_data import max_date, Filter,exportcsv,uniqeseq, uniqelineage, Pangovarsionlist, AdvanceFiltering, StateData, Distribution
-from split.api.lineage_analysis import StatesMutationDistribution, Frequency
+from split.api.lineage_analysis import StatesMutationDistribution, Frequency, StatesLineageDistribution
 # from split.api.login import UserLoginView
 # from split.api.filetrbackend import RestView
 urlpatterns = [
@@ -20,5 +20,6 @@ urlpatterns = [
     path('statedata/', StateData.as_view(), name='statedata'),
     path('frequency/', Frequency.as_view(), name='frequency'),
     path('statesmutationdistribution/', StatesMutationDistribution.as_view(), name='statesmutationdistribution'),
+    path('stateslineagedistribution/', StatesLineageDistribution.as_view(), name='stateslineagedistribution'),
     path('distribution/', Distribution.as_view(), name='distribution'),
 ]
