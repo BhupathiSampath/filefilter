@@ -9,6 +9,7 @@ from split.api.filtered_data import LocationFilter
 from split.models import tsvfile
 import pandas as pd
 from django.db.models import Count
+from datetime import date, timedelta
 
 class LargeResultsSetPagination(PageNumberPagination):  
     page_size = 100
@@ -36,14 +37,31 @@ class StatesMutationDistribution(ListAPIView):
         # QuerySet = df.to_dict("series")
         return QuerySet
         # return Response({"data": QuerySet})
+class StateDistributionSerializer(serializers.ModelSerializer):
+    strain__count = serializers.IntegerField(read_only=True,)
+    class Meta:
+        model = tsvfile
+        fields = ("state","strain__count",)
+
+class StatesSequenceDistribution(ListAPIView):
+    serializer_class = StateDistributionSerializer
+    def get_queryset(self):
+        QuerySet = tsvfile.objects.values('state').annotate(Count('strain', distinct=True))
+        return QuerySet
+
+class LineageDistributionSerializer(serializers.ModelSerializer):
+    lineage__count = serializers.IntegerField(read_only=True,)
+    class Meta:
+        model = tsvfile
+        fields = ("state","lineage__count",)
 
 class StatesLineageDistribution(RetrieveAPIView):
-    def get(self, request):
-        df = pd.DataFrame(list(tsvfile.objects.values("state", "lineage")))
-        df = df['lineage'].groupby(df['state']).nunique().reset_index(name="count")
-        # df = pd.DataFrame(df)
-        QuerySet = df.to_dict("r")
-        return Response({"data": QuerySet})
+    serializer_class = LineageDistributionSerializer
+    def get_queryset(self):
+        QuerySet = tsvfile.objects.values('state').annotate(Count('lineage', distinct=True))
+        return QuerySet
+
+
 
 class Frequency(RetrieveAPIView):
     pagination_class = LargeResultsSetPagination
@@ -54,3 +72,25 @@ class Frequency(RetrieveAPIView):
         QuerySet = df.to_dict("r")
         print(QuerySet)
         return Response({"data": QuerySet})
+
+
+class MonthDistributionSerializer(serializers.ModelSerializer):
+    strain__count = serializers.IntegerField(read_only=True,)
+    class Meta:
+        model = tsvfile
+        fields = ("month_number","strain__count",)
+
+import datetime as dt
+class MonthlyDistribution(ListAPIView):
+    serializer_class = MonthDistributionSerializer
+    filter_backends = (DjangoFilterBackend,SearchFilter,OrderingFilter)
+    filter_class = LocationFilter
+    filter_fields = ('index','date','start_date','end_date','strain','state','lineage','reference_id','mutation','amino_acid_position','gene','mutation_deletion',)
+    search_fields = ('index','date','strain','state','lineage','reference_id','mutation','amino_acid_position','gene','mutation_deletion',)
+    ordering_fields = ['index','date','strain','state','lineage','reference_id','mutation','amino_acid_position','gene','mutation_deletion',]
+    def get_queryset(self):
+        days = int(self.request.GET.get('days',3650))
+        year = self.request.GET.get('year',"202")
+        days=date.today()-timedelta(days=days)
+        QuerySet = tsvfile.objects.filter(date__gte=days,month_number__icontains=year).values('month_number').annotate(Count('strain', distinct=True)).order_by('date__year','date__month')
+        return QuerySet

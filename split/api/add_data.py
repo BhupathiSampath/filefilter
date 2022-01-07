@@ -47,8 +47,25 @@ class adddata(generics.CreateAPIView):
         # reader[['reference_id','amino_acid_position','mutation']] = reader['mutation_deletion'].str.split('([*][a-zA-Z]+)([0-9]+)', n=1, expand=True)
         # print(reader)
         # reader[['reference_id','amino_acid_position','mutation']] = (re.split('\d+([0-9]+)', reader["mutation_deletion"], 2))
+        # reader['date1'] = pd.to_datetime(reader.date, format='%Y-%m-%d')
+        reader.sort_values('date')
+        
+        reader['date1'] = pd.to_datetime(reader.date, format='%Y-%m-%d')
+        reader['week_number'] = reader['date1'].dt.strftime('%Y-W%V')
+        reader['month_number'] = reader['date1'].dt.strftime('%Y-%B')
+
+        # reader['week_number'] = reader['date1'].dt.isocalendar().week
+        # reader['month_number'] = reader['date1'].dt.month
+        # reader["year"] = reader["date1"].dt.isocalendar().year
+        # reader["year"] = reader["year"].apply(str)
+        # reader["week_number"]= reader["week_number"].apply(str)
+        # reader["month_number"]= reader["month_number"].apply(str)
+        # reader["week_number"]= reader["year"] + "-" + reader["week_number"]
+        # reader["month_number"]= reader["year"] + "-" + reader["month_number"]
+
         reader[['gene','reference_id','amino_acid_position','mutation']] = reader['mutation/deletion'].str.split(':([a-zA-Z*]+)([0-9]+)', n=1, expand=True)
         reader.rename(columns = {'mutation/deletion':'mutation_deletion'}, inplace = True)
+
         engine = create_engine('sqlite:///db.sqlite3')
         tsvfile(reader.to_sql(tsvfile._meta.db_table, con=engine,index=True, if_exists='replace'))
         # PangoVarsion(reader1.to_sql(PangoVarsion._meta.db_table, con=engine,index=True, if_exists='replace'))
