@@ -20,10 +20,10 @@ path = f'{BASE_DIR}/downloads/tsvfile{new_file}.csv'
 f_name = f'tsvfile{new_file}.csv'
 
 class LargeResultsSetPagination(PageNumberPagination):  
-    page_size = 100
+    page_size = 25
     page_size_query_param = 'page_size'
 class Filterpage(PageNumberPagination):
-    page_size = 100
+    page_size = 25
     page_size_query_param = 'page_size'
     # paginated_by = 100
     def get_paginated_response(self, data):
@@ -57,6 +57,7 @@ class LocationFilter(filters.FilterSet):
     date = filters.CharFilter(lookup_expr='icontains')
     start_date = filters.DateFilter(field_name="date",lookup_expr="gte")
     end_date = filters.DateFilter(field_name="date",lookup_expr="lte")
+    week_number = ListFilter(field_name="lineage",lookup_expr='in')
     class Meta:
         model = tsvfile
         fields = ['index','date','start_date','end_date','strain','state','lineage','reference_id','mutation','amino_acid_position','gene','mutation_deletion',]
@@ -108,33 +109,41 @@ class Filter(ListAPIView):
         QuerySet = tsvfile.objects.filter(date__gte=days)
         return QuerySet
 
+class WeekDistributionSerializer(serializers.ModelSerializer):
+    strain__count = serializers.IntegerField(read_only=True,)
+    class Meta:
+        model = tsvfile
+        fields = ("week_number","strain__count",)
+
 import datetime as dt
 class Distribution(ListAPIView):
-    serializer_class = dataserializer
-    pagination_class = LargeResultsSetPagination
+    serializer_class = WeekDistributionSerializer
     filter_backends = (DjangoFilterBackend,SearchFilter,OrderingFilter)
     filter_class = LocationFilter
     filter_fields = ('index','date','start_date','end_date','strain','state','lineage','reference_id','mutation','amino_acid_position','gene','mutation_deletion',)
     search_fields = ('index','date','strain','state','lineage','reference_id','mutation','amino_acid_position','gene','mutation_deletion',)
     ordering_fields = ['index','date','strain','state','lineage','reference_id','mutation','amino_acid_position','gene','mutation_deletion',]
-    def get(self,request):
+    def get_queryset(self):
          
         days = int(self.request.GET.get('days',3650))
-        state = self.request.GET.get('state',)
+        year = self.request.GET.get('year',"202")
+        # state = self.request.GET.get('state',)
         # strain = self.request.GET.get('strain',ListFilter(field_name="strain",lookup_expr='icontains'))
         # lineage = self.request.GET.get('lineage',)
         days=date.today()-timedelta(days=days)
-        QuerySet = tsvfile.objects.filter(date__gte=days,state=state,).order_by('date')
-        QuerySet = pd.DataFrame(list(QuerySet.values()))
-        QuerySet['date'] = pd.to_datetime(QuerySet.date, format='%Y-%m-%d')
-        QuerySet['Week_Number'] = QuerySet['date'].dt.isocalendar().week
-        QuerySet["year"] = QuerySet["date"].dt.isocalendar().year
-        QuerySet["year"] = QuerySet["year"].apply(str)
-        QuerySet["Week_Number"]= QuerySet["Week_Number"].apply(str)
-        QuerySet["Week_Number"]= QuerySet["year"] + "-" + QuerySet["Week_Number"]
-        QuerySet = QuerySet['strain'].groupby(QuerySet['Week_Number']).nunique().reset_index(name="week_data")
-        QuerySet = QuerySet.to_dict("r")
-        return Response(QuerySet)
+        # QuerySet = tsvfile.objects.filter(date__gte=days).order_by('date')
+        QuerySet = tsvfile.objects.filter(date__gte=days,week_number__icontains=year).values('week_number').annotate(Count('strain', distinct=True))
+        # QuerySet = pd.DataFrame(list(QuerySet.values()))
+        # QuerySet['date'] = pd.to_datetime(QuerySet.date, format='%Y-%m-%d')
+        # QuerySet['Week_Number'] = QuerySet['date'].dt.isocalendar().week
+        # QuerySet["year"] = QuerySet["date"].dt.isocalendar().year
+        # QuerySet["year"] = QuerySet["year"].apply(str)
+        # QuerySet["Week_Number"]= QuerySet["Week_Number"].apply(str)
+        # QuerySet["Week_Number"]= QuerySet["year"] + "-" + QuerySet["Week_Number"]
+        # QuerySet = QuerySet['strain'].groupby(QuerySet['Week_Number']).nunique().reset_index(name="week_data")
+        # QuerySet = QuerySet.to_dict("r")
+        return QuerySet
+        # return Response(QuerySet)
 
 
 
@@ -241,7 +250,7 @@ class uniqeseq(ListAPIView):
     serializer_class = strainserializer
     def get(self,request):
         QuerySet = tsvfile.objects.raw('select count(distinct(strain)) as count,"index" from split_tsvfile')
-        serializer = stateserializer(QuerySet, many =True)
+        serializer = strainserializer(QuerySet, many =True)
         return Response(serializer.data)
 
 
@@ -277,40 +286,5 @@ class Pangovarsionlist(ListAPIView):
         QuerySet = PangoVarsion.objects.all().extra(select={'date':'DATE(date)'}).order_by('-id')[0:1]
         return QuerySet
 
-
-class stateserializer(serializers.ModelSerializer):
-    count = serializers.IntegerField(read_only=True,)
-    class Meta:
-        model = tsvfile
-        fields = ("count",)
-        # fields = ("strain",)
-
-class StateData1(ListAPIView):
-    # serializer_class = stateserializer
-    # pagination_class = LargeResultsSetPagination
-    def get(self,request):
-        QuerySet = tsvfile.objects.raw('select count(distinct(strain)) as count,"index" from split_tsvfile')
-        serializer = stateserializer(QuerySet, many =True)
-        return Response(serializer.data)
-
-class StateData(ListAPIView):
-    serializer_class = stateserializer
-    # pagination_class = LargeResultsSetPagination
-    filter_backends = (DjangoFilterBackend,SearchFilter,OrderingFilter)
-    filterset_class = LocationFilter
-    
-    filter_fields = ('index','date','start_date','end_date','strain','state','lineage','reference_id','mutation','amino_acid_position','gene','mutation_deletion',)
-    search_fields = ('index','date','strain','state','lineage','reference_id','mutation','amino_acid_position','gene','mutation_deletion',)
-    ordering_fields = ['index','date','strain','state','lineage','reference_id','mutation','amino_acid_position','gene','mutation_deletion',]
-    def get_queryset(self):
-        # QuerySet = tsvfile.objects.raw('select * from split_tsvfile')
-        # QuerySet = tsvfile.objects.raw('select count(distinct(strain)) as count,state,"index" from split_tsvfile group by state')
-        QuerySet = tsvfile.objects.values('state').annotate(Count('strain', distinct=True))
-        # QuerySet = tsvfile.objects.values('state').annotate(Count('strain', distinct=True))
-        # print(p)
-        # print(dir(QuerySet.columns.count))
-        # serializer = stateserializer(QuerySet, many =True)
-        return QuerySet
-        # return Response({"data": serializer.data})
 
         
