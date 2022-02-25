@@ -1,6 +1,6 @@
-from django.db import models
-import datetime, time
 import random
+import datetime, time
+from django.db import models
 
 
 # def str_time_prop(start, end, time_format, prop):
@@ -36,7 +36,8 @@ class tsvfile(models.Model):
     state                       = models.CharField(max_length=300,default=None, blank=True, null=True)
     mutation_deletion           = models.CharField(max_length=300,default=None, blank=True, null=True)
     week_number                 = models.CharField(max_length=50,default=None, blank=True, null=True)
-    month_number                 = models.CharField(max_length=50,default=None, blank=True, null=True)
+    month_number                = models.CharField(max_length=50,default=None, blank=True, null=True)
+    Class                       = models.CharField(max_length=100,default=None, blank=True, null=True)
     def __str__(self):
         return self.strain
 

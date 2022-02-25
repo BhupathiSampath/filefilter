@@ -1,29 +1,31 @@
-from django.db.models.query import QuerySet
-from django.db.models import Count
+import re
+import datetime
 import pandas as pd
-from django_filters.rest_framework import DjangoFilterBackend
+import pandas as pd
+from django.db.models import Count
+from collections import OrderedDict
+from datetime import date, timedelta
 from rest_framework import serializers
-from rest_framework.filters import SearchFilter, OrderingFilter
-from rest_framework.generics import ListAPIView, RetrieveAPIView
-from rest_framework.pagination import PageNumberPagination
+from splitting.settings import BASE_DIR
+from django.db.models.query import QuerySet
 from rest_framework.response import Response
 from split.models import tsvfile, PangoVarsion
-import datetime
-from datetime import date, timedelta
-import pandas as pd
-from collections import OrderedDict
-import re
-from splitting.settings import BASE_DIR
+from rest_framework.pagination import PageNumberPagination
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework.filters import SearchFilter, OrderingFilter
+from rest_framework.generics import ListAPIView, RetrieveAPIView
+
+
 file_name = str(datetime.datetime.today())
 new_file = re.sub('[ ;:]', '_', file_name)
 path = f'{BASE_DIR}/downloads/tsvfile{new_file}.csv'
 f_name = f'tsvfile{new_file}.csv'
 
 class LargeResultsSetPagination(PageNumberPagination):  
-    page_size = 25
+    page_size = 20
     page_size_query_param = 'page_size'
 class Filterpage(PageNumberPagination):
-    page_size = 25
+    page_size = 20
     page_size_query_param = 'page_size'
     # paginated_by = 100
     def get_paginated_response(self, data):
@@ -52,7 +54,7 @@ class LocationFilter(filters.FilterSet):
     lineage = ListFilter(field_name="lineage",lookup_expr='in')
     reference_id = filters.CharFilter(lookup_expr='icontains')
     mutation = filters.CharFilter(lookup_expr='icontains')
-    amino_acid_position = filters.CharFilter(lookup_expr='icontains')
+    amino_acid_position = filters.NumberFilter(lookup_expr='exact')
     gene = filters.CharFilter(lookup_expr='icontains')
     date = filters.CharFilter(lookup_expr='icontains')
     start_date = filters.DateFilter(field_name="date",lookup_expr="gte")
@@ -124,29 +126,60 @@ class Distribution(ListAPIView):
     search_fields = ('index','date','strain','state','lineage','reference_id','mutation','amino_acid_position','gene','mutation_deletion',)
     ordering_fields = ['index','date','strain','state','lineage','reference_id','mutation','amino_acid_position','gene','mutation_deletion',]
     def get_queryset(self):
+        days = int(self.request.GET.get('days',3650))
+        year = self.request.GET.get('year',"202")
+        days=date.today()-timedelta(days=days)
+        QuerySet = tsvfile.objects.filter(date__gte=days,week_number__icontains=year).values('week_number').annotate(Count('strain', distinct=True))
+        return QuerySet
+def split(arr, size):
+    arrs = []
+    while len(arr) > size:
+        pice = arr[:size]
+        arrs.append(pice)
+        arr   = arr[size:]
+    arrs.append(arr)
+    return arrs
+
+class googlChart(ListAPIView):
+    serializer_class = WeekDistributionSerializer
+    filter_backends = (DjangoFilterBackend,SearchFilter,OrderingFilter)
+    filter_class = LocationFilter
+    filter_fields = ('index','date','start_date','end_date','strain','state','lineage','reference_id','mutation','amino_acid_position','gene','mutation_deletion',)
+    search_fields = ('index','date','strain','state','lineage','reference_id','mutation','amino_acid_position','gene','mutation_deletion',)
+    ordering_fields = ['index','date','strain','state','lineage','reference_id','mutation','amino_acid_position','gene','mutation_deletion',]
+    def get(self, request):
          
         days = int(self.request.GET.get('days',3650))
         year = self.request.GET.get('year',"202")
-        # state = self.request.GET.get('state',)
-        # strain = self.request.GET.get('strain',ListFilter(field_name="strain",lookup_expr='icontains'))
-        # lineage = self.request.GET.get('lineage',)
         days=date.today()-timedelta(days=days)
-        # QuerySet = tsvfile.objects.filter(date__gte=days).order_by('date')
         QuerySet = tsvfile.objects.filter(date__gte=days,week_number__icontains=year).values('week_number').annotate(Count('strain', distinct=True))
-        # QuerySet = pd.DataFrame(list(QuerySet.values()))
-        # QuerySet['date'] = pd.to_datetime(QuerySet.date, format='%Y-%m-%d')
-        # QuerySet['Week_Number'] = QuerySet['date'].dt.isocalendar().week
-        # QuerySet["year"] = QuerySet["date"].dt.isocalendar().year
-        # QuerySet["year"] = QuerySet["year"].apply(str)
-        # QuerySet["Week_Number"]= QuerySet["Week_Number"].apply(str)
-        # QuerySet["Week_Number"]= QuerySet["year"] + "-" + QuerySet["Week_Number"]
-        # QuerySet = QuerySet['strain'].groupby(QuerySet['Week_Number']).nunique().reset_index(name="week_data")
-        # QuerySet = QuerySet.to_dict("r")
-        return QuerySet
-        # return Response(QuerySet)
-
-
-
+        l = []
+        for dic in QuerySet:
+            for i in dic.values():
+                l.append(i)
+        l = split(l,2)
+        l1 = ["week", "count"]
+        l.insert(0, l1)
+        return Response(l)
+class D3Chart(ListAPIView):
+    serializer_class = WeekDistributionSerializer
+    filter_backends = (DjangoFilterBackend,SearchFilter,OrderingFilter)
+    filter_class = LocationFilter
+    filter_fields = ('index','date','start_date','end_date','strain','state','lineage','reference_id','mutation','amino_acid_position','gene','mutation_deletion',)
+    search_fields = ('index','date','strain','state','lineage','reference_id','mutation','amino_acid_position','gene','mutation_deletion',)
+    ordering_fields = ['index','date','strain','state','lineage','reference_id','mutation','amino_acid_position','gene','mutation_deletion',]
+    def get(self, request):
+         
+        days = int(self.request.GET.get('days',3650))
+        year = self.request.GET.get('year',"202")
+        days=date.today()-timedelta(days=days)
+        QuerySet = tsvfile.objects.filter(date__gte=days,week_number__icontains=year).values('week_number').annotate(Count('strain', distinct=True))
+        l = []
+        for dic in QuerySet:
+            for i in dic.values():
+                l.append(i)
+        l = split(l,2)
+        return Response(l)
 
 
 class AdvanceFilter(filters.FilterSet):
@@ -253,24 +286,6 @@ class uniqeseq(ListAPIView):
         serializer = strainserializer(QuerySet, many =True)
         return Response(serializer.data)
 
-
-
-class lineageserializer(serializers.ModelSerializer):
-    class Meta:
-        model = tsvfile
-        fields = ('lineage',)
-class uniqelineage(ListAPIView):
-    serializer_class = lineageserializer
-    # pagination_class = LargeResultsSetPagination
-    # filter_backends = (DjangoFilterBackend,SearchFilter,OrderingFilter)
-    # filterset_class = LocationFilter
-    
-    # filter_fields = ('index','date','start_date','end_date','strain','reference_id','mutation','amino_acid_position','gene','mutation_deletion',)
-    # search_fields = ('index','date','strain','state','lineage','reference_id','mutation','amino_acid_position','gene','mutation_deletion',)
-    # ordering_fields = ['index','date','strain','state','lineage','reference_id','mutation','amino_acid_position','gene','mutation_deletion',]
-    def get_queryset(self):
-        QuerySet = tsvfile.objects.order_by().values('lineage').distinct()
-        return QuerySet
 
 
 class PangoSerializer(serializers.ModelSerializer):

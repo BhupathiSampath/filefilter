@@ -89,12 +89,20 @@ WSGI_APPLICATION = 'splitting.wsgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/3.2/ref/settings/#databases
-
+import psycopg2
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
         'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
-    }
+    },
+    'users': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'demo',
+        'USER': 'demo',
+        'HOST': 'localhost',
+        'PORT': 5432,
+        'PASSWORD':'demo'
+    },
 }
 
 
@@ -148,3 +156,4 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 #         'rest_framework_filters.backends.RestFrameworkFilterBackend',
 #     )
 # }
+
