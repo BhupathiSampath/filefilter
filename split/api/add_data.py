@@ -88,7 +88,7 @@ class adddata(generics.CreateAPIView):
         reader.loc[(reader.lineage.str.contains(
             '|'.join(none))),  'Class'] = 'None'
 
-        # reader['date'] = pd.to_datetime(reader.date, format='%Y-%m-%d').dt.date
+        reader['date'] = pd.to_datetime(reader.date, format='%Y-%m-%d').dt.date
         reader['date1'] = pd.to_datetime(reader.date, format='%Y-%m-%d')
         reader['year'] = reader['date1'].dt.strftime('%Y')
         reader['week_number'] = reader['date1'].dt.strftime('W%V-%Y')
@@ -109,10 +109,10 @@ class adddata(generics.CreateAPIView):
         # data_dict = reader.to_dict("records")
         # collection.insert_many(data_dict)
         # # client =  MongoClient("mongodb+srv://insacog:insacog@clustertest-icsum.mongodb.net/insacog_query_hub?retryWrites=true&w=majority")
-        engine = create_engine('sqlite:///db.sqlite3')
+        # engine = create_engine('sqlite:///db.sqlite3')
 
-        # engine = create_engine(
-        #     "postgresql+psycopg2://insacog:insacog@localhost:5432/insacog_query_hub")
+        engine = create_engine(
+            "postgresql+psycopg2://insacog:insacog@localhost:5432/insacog_query_hub")
         # engine = create_engine(
         #     "mongodb:///?Host=localhost;&Port=27017&Database=insacog_query_hub&User=insacog&Password=insacog")
         tsvfile(reader.to_sql(tsvfile._meta.db_table,

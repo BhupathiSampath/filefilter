@@ -139,10 +139,10 @@ class LineageClassificationWeekly(RetrieveAPIView):
             obj = obj.filter(date__lte=end_date)
         if(year):
             obj = obj.filter(year__in=year.split(','))
-        QuerySet = obj.filter(date__gte=days,).values(
-        'week_number', 'Class').annotate(Count('strain', distinct=True)).order_by('year')
         # QuerySet = obj.filter(date__gte=days,).values(
-        #     'week_number', 'Class').annotate(Count('strain', distinct=True)).order_by('date__year')
+        # 'week_number', 'Class').annotate(Count('strain', distinct=True)).order_by('year')
+        QuerySet = obj.filter(date__gte=days,).values(
+            'week_number', 'Class').annotate(Count('strain', distinct=True)).order_by('date__year')
         return Response(stacked_bar(QuerySet))
 
 
@@ -219,7 +219,7 @@ class LineageClassificationMonth(RetrieveAPIView):
             obj = obj.filter(date__lte=end_date)
         if(year):
             obj = obj.filter(year__in=year.split(','))
-        QuerySet = obj.filter(date__gte=days,).values('month_number', 'Class').annotate(Count('strain', distinct=True))
+        QuerySet = obj.filter(date__gte=days,).values('month_number', 'Class').annotate(Count('strain', distinct=True)).order_by('year')
         return Response(stacked_bar(QuerySet))
 
 

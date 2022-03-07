@@ -152,10 +152,10 @@ class Distribution(ListAPIView):
         days = int(self.request.GET.get('days', 3650))
         year = self.request.GET.get('year', "2021,2022")
         days = date.today()-timedelta(days=days)
-        QuerySet = tsvfile.objects.filter(date__gte=days,year__in=year.split(',')).values(
-            'week_number').annotate(Count('strain', distinct=True)).order_by('year')
         # QuerySet = tsvfile.objects.filter(date__gte=days,year__in=year.split(',')).values(
-        #     'week_number').annotate(Count('strain', distinct=True)).order_by('date__year','date__week')
+        #     'week_number').annotate(Count('strain', distinct=True)).order_by('year')
+        QuerySet = tsvfile.objects.filter(date__gte=days,year__in=year.split(',')).values(
+            'week_number').annotate(Count('strain', distinct=True)).order_by('date__year','date__week')
         return QuerySet
 
 
