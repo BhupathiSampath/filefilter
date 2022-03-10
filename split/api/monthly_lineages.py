@@ -145,7 +145,9 @@ class MonthlyDistribution(RetrieveAPIView):
             obj = obj.filter(date__lte=end_date)
         if(year):
             obj = obj.filter(year__in=year.split(','))
-        QuerySet = obj.filter(date__gte=days,).values(
+        # if(days):
+        #     obj = obj.filter(date__gte='2022-01-01')
+        QuerySet = obj.values(
             'month_number',).annotate(Count('strain', distinct=True)).order_by('date')
         # l = []
         result.clear()

@@ -97,27 +97,27 @@ WSGI_APPLICATION = 'splitting.wsgi.application'
 #     }
 # }
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql_psycopg2',
-        'NAME': 'insacog_query_hub',
-        'USER': 'insacog',
-        'PASSWORD': 'insacog',
-        'HOST': 'localhost',
-        'PORT': '5432',
-    }
-}
-
 # DATABASES = {
 #     'default': {
-#         'ENGINE': 'djongo',
+#         'ENGINE': 'django.db.backends.postgresql_psycopg2',
 #         'NAME': 'insacog_query_hub',
 #         'USER': 'insacog',
 #         'PASSWORD': 'insacog',
 #         'HOST': 'localhost',
-#         'PORT': '27017',
+#         'PORT': '5432',
 #     }
 # }
+
+DATABASES = {
+    'default': {
+        'ENGINE': 'djongo',
+        'NAME': 'insacog_query_hub',
+        'USER': 'insacog',
+        'PASSWORD': 'insacog',
+        'HOST': 'localhost',
+        'PORT': '27017',
+    }
+}
 # Password validation
 # https://docs.djangoproject.com/en/3.2/ref/settings/#auth-password-validators
 

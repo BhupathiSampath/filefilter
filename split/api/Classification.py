@@ -41,7 +41,7 @@ class LineageClassificationDistribution(ListAPIView):
         days = int(self.request.GET.get('days', 3650))
         year = self.request.GET.get('year', "2021,2022")
         days = date.today()-timedelta(days=days)
-        QuerySet = tsvfile.objects.filter(date__gte=days, year__in=year.split(',')).order_by(
+        QuerySet = tsvfile.objects.filter(date__gte=days).order_by(
         ).values('Class').annotate(Count('strain', distinct=True))
         return QuerySet
 

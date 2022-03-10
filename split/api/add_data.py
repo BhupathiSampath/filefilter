@@ -61,7 +61,8 @@ class adddata(generics.CreateAPIView):
         serializer.is_valid(raise_exception=True)
         file = serializer.validated_data['file']
         # file_version = serializer.validated_data['file_version']
-        reader = pd.read_csv(file, sep='\t', header=0)
+        reader = pd.read_csv(file, header=0, delimiter = '\t', encoding = 'utf-8', low_memory = False)
+        print(reader)
         # reader1 = pd.read_csv(file_version, header=0, nrows=1)
         reader = reader.sort_values('date')
 
@@ -88,7 +89,7 @@ class adddata(generics.CreateAPIView):
         reader.loc[(reader.lineage.str.contains(
             '|'.join(none))),  'Class'] = 'None'
 
-        reader['date'] = pd.to_datetime(reader.date, format='%Y-%m-%d').dt.date
+        reader['date'] = pd.to_datetime(reader.date, format='%Y-%m-%d')
         reader['date1'] = pd.to_datetime(reader.date, format='%Y-%m-%d')
         reader['year'] = reader['date1'].dt.strftime('%Y')
         reader['week_number'] = reader['date1'].dt.strftime('W%V-%Y')
@@ -101,28 +102,30 @@ class adddata(generics.CreateAPIView):
                ] = reader['mutation/deletion'].str.split(':([a-zA-Z*]+)([0-9]+)', n=1, expand=True)
         reader.rename(
             columns={'mutation/deletion': 'mutation_deletion'}, inplace=True)
-        
-        # client =  MongoClient("mongodb://insacog:insacog@localhost/insacog_query_hub")
-        # db = client['insacog_query_hub']
-        # collection = db['split_tsvfile']
-        # reader.reset_index(inplace=True)
-        # data_dict = reader.to_dict("records")
-        # collection.insert_many(data_dict)
-        # # client =  MongoClient("mongodb+srv://insacog:insacog@clustertest-icsum.mongodb.net/insacog_query_hub?retryWrites=true&w=majority")
+        reader = reader.filter(['date','strain','state', 'lineage', 'mutation_deletion','gene', 'reference_id', 'amino_acid_position', 'mutation','year','week_number','month_number','Class'], axis=1)
+
+        client =  MongoClient("mongodb://insacog:insacog@localhost/insacog_query_hub")
+        db = client['insacog_query_hub']
+        collection = db['split_tsvfile']
+        reader.reset_index(inplace=True)
+        data_dict = reader.to_dict("records")
+        collection.remove()
+        collection.insert_many(data_dict)
+
+        # client =  MongoClient("mongodb+srv://insacog:insacog@clustertest-icsum.mongodb.net/insacog_query_hub?retryWrites=true&w=majority")
         # engine = create_engine('sqlite:///db.sqlite3')
 
-        engine = create_engine(
-            "postgresql+psycopg2://insacog:insacog@localhost:5432/insacog_query_hub")
+        # engine = create_engine(
+        #     "postgresql+psycopg2://insacog:insacog@localhost:5432/insacog_query_hub")
         # engine = create_engine(
         #     "mongodb:///?Host=localhost;&Port=27017&Database=insacog_query_hub&User=insacog&Password=insacog")
-        tsvfile(reader.to_sql(tsvfile._meta.db_table,
-                con=engine, index=True, if_exists='replace'))
+        # tsvfile(reader.to_sql(tsvfile._meta.db_table,
+        #         con=engine, index=True, if_exists='replace'))
 
         # PangoVarsion(reader1.to_sql(PangoVarsion._meta.db_table, con=engine,index=True, if_exists='replace'))
 
         # objs = [
         #     tsvfile(
-        #         # index=row.index,
         #         strain=row.strain,
         #         lineage=row.lineage,
         #         gene=row.gene,

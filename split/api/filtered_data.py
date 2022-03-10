@@ -19,6 +19,7 @@ from rest_framework.pagination import PageNumberPagination
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
 from rest_framework.generics import ListAPIView, RetrieveAPIView
+from rest_framework.views import APIView
 
 
 file_name = str(datetime.datetime.today())
@@ -120,14 +121,22 @@ class Filter(ListAPIView):
                      'mutation', 'amino_acid_position', 'gene', 'mutation_deletion',)
     ordering_fields = ['index', 'date', 'strain', 'state', 'lineage', 'reference_id',
                        'mutation', 'amino_acid_position', 'gene', 'mutation_deletion', ]
-
     def get_queryset(self):
-
         days = int(self.request.GET.get('days', 3650))
         days = date.today()-timedelta(days=days)
+        print(days)
         QuerySet = tsvfile.objects.filter(date__gte=days)
         return QuerySet
 
+
+# from django.views.decorators.csrf import csrf_exempt
+# from django.http import JsonResponse
+# @csrf_exempt
+# def getdata(request,date='2020-01-02'):
+#     if request.method=='GET':
+#         data = tsvfile.objects.all()
+#         data_serializer = dataserializer(data,many=True)
+#         return JsonResponse(data_serializer.data)
 
 class WeekDistributionSerializer(serializers.ModelSerializer):
     strain__count = serializers.IntegerField(read_only=True,)
@@ -154,8 +163,9 @@ class Distribution(ListAPIView):
         days = date.today()-timedelta(days=days)
         # QuerySet = tsvfile.objects.filter(date__gte=days,year__in=year.split(',')).values(
         #     'week_number').annotate(Count('strain', distinct=True)).order_by('year')
-        QuerySet = tsvfile.objects.filter(date__gte=days,year__in=year.split(',')).values(
-            'week_number').annotate(Count('strain', distinct=True)).order_by('date__year','date__week')
+        # QuerySet = tsvfile.objects.filter(date__gte=days).values(
+        #     'week_number').annotate(Count('strain', distinct=True)).order_by('year')
+        QuerySet = tsvfile.objects.values('week_number').order_by('week_number').annotate(count=Count('strain', distinct=True))
         return QuerySet
 
 
