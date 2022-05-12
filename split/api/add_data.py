@@ -6,7 +6,7 @@ from rest_framework import generics
 from sqlalchemy import create_engine
 from rest_framework import serializers
 from rest_framework.response import Response
-from split.models import tsvfile, PangoVarsion
+from split.models import tsvfile, nextstrain
 from django.core.management.base import BaseCommand
 from pymongo import MongoClient
 # Create your views here.
@@ -24,7 +24,7 @@ class Command(BaseCommand):
 
 class fileserializer(serializers.Serializer):
     file = serializers.FileField()
-    # file_version = serializers.FileField()
+    # nextstraindata = serializers.FileField()
 
 
 class uploadserializer(serializers.Serializer):
@@ -55,14 +55,10 @@ class adddata(generics.CreateAPIView):
     serializer_class = fileserializer
 
     def post(self, request, *args, **kwargs):
-        # data = self.get_initial()
-        # file = data.get('file')
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         file = serializer.validated_data['file']
-        # file_version = serializer.validated_data['file_version']
         reader = pd.read_csv(file, sep='\t', header=0)
-        # reader1 = pd.read_csv(file_version, header=0, nrows=1)
         reader = reader.sort_values('date')
 
         reader.loc[~(reader.lineage.str.contains(
@@ -102,60 +98,56 @@ class adddata(generics.CreateAPIView):
         reader.rename(
             columns={'mutation/deletion': 'mutation_deletion'}, inplace=True)
         
-        # client =  MongoClient("mongodb://insacog:insacog@localhost/insacog_query_hub")
-        # db = client['insacog_query_hub']
-        # collection = db['split_tsvfile']
-        # reader.reset_index(inplace=True)
-        # data_dict = reader.to_dict("records")
-        # collection.insert_many(data_dict)
-        # # client =  MongoClient("mongodb+srv://insacog:insacog@clustertest-icsum.mongodb.net/insacog_query_hub?retryWrites=true&w=majority")
         engine = create_engine('sqlite:///db.sqlite3')
 
-        # engine = create_engine(
-        #     "postgresql+psycopg2://insacog:insacog@localhost:5432/insacog_query_hub")
-        # engine = create_engine(
-        #     "mongodb:///?Host=localhost;&Port=27017&Database=insacog_query_hub&User=insacog&Password=insacog")
         tsvfile(reader.to_sql(tsvfile._meta.db_table,
                 con=engine, index=True, if_exists='replace'))
 
-        # PangoVarsion(reader1.to_sql(PangoVarsion._meta.db_table, con=engine,index=True, if_exists='replace'))
-
-        # objs = [
-        #     tsvfile(
-        #         # index=row.index,
-        #         strain=row.strain,
-        #         lineage=row.lineage,
-        #         gene=row.gene,
-        #         reference_id=row.reference_id,
-        #         amino_acid_position=row.amino_acid_position,
-        #         mutation=row.mutation,
-        #         date=row.date,
-        #         state=row.state,
-        #         mutation_deletion=row.mutation_deletion,
-        #         month_number=row.month_number,
-        #         week_number=row.week_number,
-        #         Class=row.Class
-        #     )
-        #     for index, row in reader.iterrows()
-
-        # ]
-        # # try:
-        # tsvfile.objects.bulk_create(objs)
-
-        # objs = [
-        #     PangoVarsion(
-        #         version = row.version,
-        #         pangolin_version = row.pangolin_version,
-        #         pangoLEARN_version = row.pangoLEARN_version,
-        #         pango_version = row.pango_version,
-        #         date = datetime.datetime.today()
-        #     )
-        #     for index, row in reader1.iterrows()
-
-        # ]
-        # # try:
-        # PangoVarsion.objects.bulk_create(objs)
         returnmsg = {"message": "success"}
         # except Exception as e:
         #     returnmsg = {"message": "Importing error"}
+        return Response(returnmsg)
+
+
+
+class fileserializer1(serializers.Serializer):
+    file = serializers.FileField()
+
+class adddata1(generics.CreateAPIView):
+    serializer_class = fileserializer1
+
+    def post(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        file = serializer.validated_data['file']
+        reader1 = pd.read_csv(file, sep='\t', header=0,)
+        reader1['date1'] = pd.to_datetime(reader1.date, format='%Y-%m-%d')
+        reader1.loc[reader1.collection_week ==
+                   "W52-2022", "collection_week"] = "W01-2022"
+        reader1['collection_year'] = reader1['date1'].dt.strftime('%Y')
+        reader1 = reader1[["strain","date", "division","region_type","submitting_lab","collection_month","collection_week","collection_year","WHO_label","lineage"]]
+        # reader1 = reader1.reset_index(inplace = True)
+        engine = create_engine('sqlite:///db.sqlite3')
+
+        nextstrain(reader1.to_sql(nextstrain._meta.db_table,
+                con=engine, index=True, if_exists='replace'))
+        print(reader1)
+        # nextstrain.objects.all().delete()
+        # objs = [
+        #     nextstrain(
+        #         index=row.index,
+        #         strain=row.strain,
+        #         date=row.date,
+        #         state=row.division,
+        #         submitting_lab=row.submitting_lab,
+        #         collection_month=row.collection_month,
+        #         collection_week=row.collection_week,
+        #         collection_year=row.year,
+        #         who_label=row.WHO_label,
+        #         lineage=row.lineage,
+        #     )
+        #     for index, row in reader1.iterrows()
+        # ]
+        # nextstrain.objects.bulk_create(objs)
+        returnmsg = {"message": "success"}
         return Response(returnmsg)

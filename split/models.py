@@ -71,3 +71,29 @@ class PangoVarsion(models.Model):
 
     def __str__(self):
         return self.version
+
+
+class nextstrain(models.Model):
+    index = models.BigIntegerField(primary_key=True)
+    strain = models.CharField(
+        max_length=300, default=None, blank=True, null=True)
+    date = models.DateField(default=None, blank=True, null=True)
+    region_type = models.CharField(
+        max_length=300, default=None, blank=True, null=True)
+    division = models.CharField(
+        max_length=300, default=None, blank=True, null=True)
+    submitting_lab = models.CharField(
+        max_length=300, default=None, blank=True, null=True)
+    collection_month = models.CharField(
+        max_length=50, default=None, blank=True, null=True)
+    collection_week = models.CharField(
+        max_length=50, default=None, blank=True, null=True)
+    collection_year = models.CharField(
+        max_length=50, default=None, blank=True, null=True)
+    who_label = models.CharField(
+        max_length=100, default=None, blank=True, null=True)
+    lineage = models.CharField(
+        max_length=225, default=None, blank=True, null=True)
+
+    def __str__(self):
+        return self.strain

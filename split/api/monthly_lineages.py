@@ -156,3 +156,36 @@ class MonthlyDistribution(RetrieveAPIView):
         # print(l)
         # l.clear()
         return Response(l)
+
+
+from split.api.filetrbackend import DjangoFilterBackend
+from rest_framework.filters import SearchFilter, OrderingFilter
+from split.api.filtered_data import LocationFilter
+from rest_framework import serializers
+
+
+class WeekDistributionSerializer(serializers.ModelSerializer):
+    strain__count = serializers.IntegerField(read_only=True,)
+
+    class Meta:
+        model = tsvfile
+        fields = ("week_number","Class", "strain__count",)
+        
+class Queryoverwrite(ListAPIView):
+    serializer_class = WeekDistributionSerializer
+    # pagination_class = LargeResultsSetPagination
+    filter_backends = (DjangoFilterBackend, SearchFilter, OrderingFilter)
+    filter_class = LocationFilter
+    filter_fields = ('index', 'date', 'start_date', 'end_date', 'strain', 'state', 'lineage',
+                     'reference_id', 'mutation', 'amino_acid_position', 'gene', 'mutation_deletion',)
+    def get_queryset(self):
+        l = []
+        days = int(self.request.GET.get('days', 3650))
+        days = date.today()-timedelta(days=days)
+        data = tsvfile.objects.filter(date__gte=days,).values(
+        'week_number', 'Class').annotate(Count('strain', distinct=True)).order_by('year')
+        d = stacked_bar(data)
+        print(d)
+        l.append(d)
+        print(l)
+        return l

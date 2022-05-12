@@ -119,7 +119,7 @@ class LineageClassificationWeekly(RetrieveAPIView):
         if(state):
             obj = obj.filter(state__icontains=state)
         if(strain):
-            obj = obj.filter(strain__icontains=strain)
+            obj = obj.filter(strain__contains=strain)
         if(mutaion_deletion):
             obj = obj.filter(mutaion_deletion__icontains=mutaion_deletion)
         if(gene):
@@ -218,7 +218,7 @@ class LineageClassificationMonth(RetrieveAPIView):
         if(end_date):
             obj = obj.filter(date__lte=end_date)
         if(year):
-            obj = obj.filter(year__in=year.split(','))
+            obj = obj.filter(year__in=year.split(',')).order_by('year','date__month')
         QuerySet = obj.filter(date__gte=days,).values('month_number', 'Class').annotate(Count('strain', distinct=True))
         return Response(stacked_bar(QuerySet))
 
