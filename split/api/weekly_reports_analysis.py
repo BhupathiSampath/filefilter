@@ -131,7 +131,6 @@ def stacked_bar(QuerySet):
         for i in yu:
             j['value1'] = i
     req_list = sorted(req_list, key=lambda d: d['who_label'])
-    # print(req_list)
     return ({res[0]: mnd, res[1]: req_list})
 
 class variant_status(RetrieveAPIView):
@@ -156,7 +155,6 @@ class last_four_month1(RetrieveAPIView):
             labels.append(i['who_label'])
         for j in sorted(labels):
             if not any(d['who_label'] == j for d in d['who_label']):
-                print(False)
                 ad = {}
                 ad["who_label"] = j
                 ad['value'] = [0] * len(d['who_label'][0]['value'])
@@ -182,7 +180,6 @@ class weekwiselastthreemonths(RetrieveAPIView):
             labels.append(i['who_label'])
         for j in sorted(labels):
             if not any(d['who_label'] == j for d in d['who_label']):
-                print(False)
                 ad = {}
                 ad["who_label"] = j
                 ad['value'] = [0] * len(d['who_label'][0]['value'])
@@ -204,25 +201,21 @@ def key_func(k):
 class Regionwisedata(RetrieveAPIView):
     def get(self, request):
         a = []; b = []; c = {}; d = {}
-        QuerySet = nextstrain.objects.filter(date__gte="2021-01-01").values('region_type','collection_week','who_label').annotate(Count('strain', distinct=True)).order_by('strain__count')
+        QuerySet = nextstrain.objects.filter(date__gte="2021-01-01").values('region_type','collection_week','who_label').annotate(Count('strain', distinct=True)).order_by('collection_year')
         QuerySet = sorted(QuerySet, key=key_func)
         for key, value in groupby(QuerySet, key_func):
-            # a.append(key)
             b.append(list(value))
             for i in b:
                 c[key] = i
         for i in c:
             for items in c[i]:
                 del items['region_type']
-        # for i in c:
             d[i] = stacked_bar(c[i])
-        # print(d)
         QuerySet1 = nextstrain.objects.values('who_label').distinct()
         labels = []
         for i in QuerySet1:
             labels.append(i['who_label'])
         for i in d.values():
-            # print(len(i['who_label'][0]['value']))
             for j in sorted(labels):
                 if not any(d['who_label'] == j for d in i['who_label']):
                     ad = {}
@@ -230,7 +223,6 @@ class Regionwisedata(RetrieveAPIView):
                     ad['value'] = [0] * len(i['who_label'][0]['value'])
                     ad['value1'] = [0.0] * len(i['who_label'][0]['value'])
                     i['who_label'].append(ad)
-            # print(i['who_label'])
             i['who_label'] = sorted(i['who_label'], key=lambda d: d['who_label'])
         return Response(d)
 
@@ -258,7 +250,6 @@ class VariantStatusbyStates(RetrieveAPIView):
         for i in QuerySet1:
             labels.append(i['who_label'])
         for i in d.values():
-            # print(len(i['who_label'][0]['value']))
             for j in sorted(labels):
                 if not any(d['who_label'] == j for d in i['who_label']):
                     ad = {}
@@ -272,25 +263,21 @@ class VariantStatusbyStates(RetrieveAPIView):
 class Regionwisedata2022(RetrieveAPIView):
     def get(self, request):
         a = []; b = []; c = {}; d = {}
-        QuerySet = nextstrain.objects.filter(date__gte="2022-01-01").values('region_type','collection_week','who_label').annotate(Count('strain', distinct=True)).order_by('strain__count')
+        QuerySet = nextstrain.objects.filter(date__gte="2022-01-01").values('region_type','collection_week','who_label').annotate(Count('strain', distinct=True)).order_by('collection_year')
         QuerySet = sorted(QuerySet, key=key_func)
         for key, value in groupby(QuerySet, key_func):
-            # a.append(key)
             b.append(list(value))
             for i in b:
                 c[key] = i
         for i in c:
             for items in c[i]:
                 del items['region_type']
-        # for i in c:
             d[i] = stacked_bar(c[i])
-        # print(d)
         QuerySet1 = nextstrain.objects.values('who_label').distinct()
         labels = []
         for i in QuerySet1:
             labels.append(i['who_label'])
         for i in d.values():
-            # print(len(i['who_label'][0]['value']))
             for j in sorted(labels):
                 if not any(d['who_label'] == j for d in i['who_label']):
                     ad = {}
@@ -298,6 +285,5 @@ class Regionwisedata2022(RetrieveAPIView):
                     ad['value'] = [0] * len(i['who_label'][0]['value'])
                     ad['value1'] = [0.0] * len(i['who_label'][0]['value'])
                     i['who_label'].append(ad)
-            # print(i['who_label'])
             i['who_label'] = sorted(i['who_label'], key=lambda d: d['who_label'])
         return Response(d)
